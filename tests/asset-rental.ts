@@ -81,6 +81,36 @@ const waitFinalized = async (signature: TransactionSignature): Promise<void> => 
   await connection.confirmTransaction({ signature, ...latest }, "finalized");
 };
 
+const SYSVAR_CLOCK = new PublicKey("SysvarC1ock11111111111111111111111111111111");
+
+/**
+ * The local validator's `Clock` (not the wall clock) is the source of truth for
+ * `start_ts`/`end_ts` gates. On a test validator the chain clock can lag wall
+ * time, so "starts now" cases must anchor on it rather than on `Date.now()`.
+ */
+const chainNow = async (): Promise<number> => {
+  // Anchor's preflight simulation runs against the connection's `finalized`
+  // bank, so a program's `Clock::get()` is the finalized clock. Anchor start
+  // times on the same clock, or a time-gated call fails even though the latest
+  // processed slot is already past `start_ts`.
+  const info = await connection.getAccountInfo(SYSVAR_CLOCK, "finalized");
+  return Number(info!.data.readBigInt64LE(32));
+};
+
+/**
+ * Poll until the processed chain clock is comfortably past `ts`.
+ *
+ * Anchor's preflight simulation runs against the connection's `finalized`
+ * bank, so the `Clock::get()` a program sees can lag the latest processed
+ * slot; START_EXTRA covers that lag before a time-gated call is attempted.
+ */
+const START_EXTRA = Number(process.env.START_EXTRA ?? 2);
+const waitForStart = async (ts: number): Promise<void> => {
+  while ((await chainNow()) < ts + START_EXTRA) {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+};
+
 const feeOf = async (signature: TransactionSignature): Promise<number> => {
   const tx = await connection.getTransaction(signature, {
     commitment: "finalized",
@@ -189,6 +219,18 @@ async function expectFailure(fn: () => Promise<unknown>): Promise<void> {
   assert.fail("expected the call to fail");
 }
 
+/**
+ * Anchor 0.30 decodes the `RentalStatus` enum to `{ variantName: value }`
+ * (e.g. `{ reserved: {} }`), not to the numeric discriminant. Map the decoded
+ * value back to the published code so assertions can stay exact.
+ */
+const statusCode = (status: unknown): number => {
+  if (typeof status === "number") return status;
+  const key = Object.keys(status as Record<string, unknown>)[0];
+  const pascal = key.charAt(0).toUpperCase() + key.slice(1);
+  return (RENTAL_STATUS as Record<string, number>)[pascal];
+};
+
 // ---------------------------------------------------------------------------
 // Fixtures used across cases
 // ---------------------------------------------------------------------------
@@ -217,6 +259,9 @@ describe("asset-rental", () => {
     await fund(ownerA.publicKey);
     await fund(ownerB.publicKey);
     await fund(renter.publicKey);
+    // The treasury only ever receives, but a fee smaller than the rent-exempt
+    // minimum cannot create an account, so give it a rent-exempt balance first.
+    await fund(treasury.publicKey);
 
     const existing = await connection.getAccountInfo(config, "finalized");
     if (!existing) {
@@ -334,7 +379,7 @@ describe("asset-rental", () => {
       assert.equal(r.priceTotal.toNumber(), priceTotal);
       assert.equal(r.depositLamports.toNumber(), L1_DEPOSIT);
       assert.equal(r.escrowLamports.toNumber(), escrow);
-      assert.equal(r.status, RENTAL_STATUS.Reserved);
+      assert.equal(statusCode(r.status), RENTAL_STATUS.Reserved);
       assert.equal(r.endTs.toNumber(), start + days * 86_400);
 
       const l = await program.account.assetListing.fetch(l1);
@@ -402,7 +447,7 @@ describe("asset-rental", () => {
   it("replay: a reused rental_id fails account creation with no double charge", async () => {
     const rentalId = newRentalId();
     const [rental] = rentalPda(l2, rentalId);
-    const start = nowTs() + 3_600;
+    const start = (await chainNow()) + 2;
 
     await createRental(program, {
       renter: renter.publicKey,
@@ -513,11 +558,14 @@ describe("asset-rental", () => {
     // A substituted platform treasury is rejected before any split happens.
     const mismatchId = newRentalId();
     const [mismatchRental] = rentalPda(l2, mismatchId);
+    // Anchor on the chain clock: the rental must start on-chain before the
+    // owner can settle it.
+    const immediate = (await chainNow()) + 2;
     await createRental(program, {
       renter: renter.publicKey,
       listing: l2,
       rentalId: mismatchId,
-      startTs: nowTs(),
+      startTs: immediate,
       days: 1,
       signers: [renter],
     });
@@ -534,6 +582,7 @@ describe("asset-rental", () => {
         }),
       "TreasuryMismatch"
     );
+    await waitForStart(immediate);
     await settleRental(program, {
       caller: ownerB.publicKey,
       listing: l2,
@@ -574,7 +623,7 @@ describe("asset-rental", () => {
       assert.equal((await balance(renter.publicKey)) - renterBefore, escrow);
 
       const r = await program.account.rentalAgreement.fetch(rental);
-      assert.equal(r.status, RENTAL_STATUS.Cancelled);
+      assert.equal(statusCode(r.status), RENTAL_STATUS.Cancelled);
       assert.equal(r.escrowLamports.toNumber(), 0);
 
       const l = await program.account.assetListing.fetch(l1);
@@ -587,14 +636,16 @@ describe("asset-rental", () => {
   it("cancel: post-start cancellation is denied", async () => {
     const rentalId = newRentalId();
     const [rental] = rentalPda(l2, rentalId);
+    const immediate = (await chainNow()) + 2;
     await createRental(program, {
       renter: renter.publicKey,
       listing: l2,
       rentalId,
-      startTs: nowTs(),
+      startTs: immediate,
       days: 1,
       signers: [renter],
     });
+    await waitForStart(immediate);
 
     await expectError(
       () =>
@@ -626,16 +677,18 @@ describe("asset-rental", () => {
     const days = 2;
     const priceTotal = L2_PRICE * days;
     const fee = Math.floor((priceTotal * 250) / 10_000);
+    const immediate = (await chainNow()) + 2;
 
     await scenario("settle", { l2, rental, treasury: treasury.publicKey }, async () => {
       await createRental(program, {
         renter: renter.publicKey,
         listing: l2,
         rentalId,
-        startTs: nowTs(),
+        startTs: immediate,
         days,
         signers: [renter],
       });
+      await waitForStart(immediate);
 
       const treasuryBefore = await balance(treasury.publicKey);
       const renterBefore = await balance(renter.publicKey);
@@ -667,7 +720,7 @@ describe("asset-rental", () => {
       assert.equal(await balance(rental), rentMin, "escrow fully drained");
 
       const r = await program.account.rentalAgreement.fetch(rental);
-      assert.equal(r.status, RENTAL_STATUS.Completed);
+      assert.equal(statusCode(r.status), RENTAL_STATUS.Completed);
       assert.equal(r.escrowLamports.toNumber(), 0);
 
       const l = await program.account.assetListing.fetch(l2);
@@ -768,7 +821,7 @@ describe("asset-rental", () => {
         signers: [renter],
       });
       assert.equal(
-        (await program.account.rentalAgreement.fetch(rental)).status,
+        statusCode((await program.account.rentalAgreement.fetch(rental)).status),
         RENTAL_STATUS.Disputed
       );
 
@@ -828,7 +881,7 @@ describe("asset-rental", () => {
       assert.equal((await balance(renter.publicKey)) - renterBefore, escrow - half);
 
       const r = await program.account.rentalAgreement.fetch(rental);
-      assert.equal(r.status, RENTAL_STATUS.Resolved);
+      assert.equal(statusCode(r.status), RENTAL_STATUS.Resolved);
       assert.equal(r.escrowLamports.toNumber(), 0);
 
       const l = await program.account.assetListing.fetch(l1);
@@ -840,12 +893,13 @@ describe("asset-rental", () => {
   it("pause: blocks new rentals, existing rentals still settle", async () => {
     const rentalId = newRentalId();
     const [rental] = rentalPda(l2, rentalId);
+    const immediate = (await chainNow()) + 2;
 
     await createRental(program, {
       renter: renter.publicKey,
       listing: l2,
       rentalId,
-      startTs: nowTs(),
+      startTs: immediate,
       days: 1,
       signers: [renter],
     });
@@ -865,6 +919,7 @@ describe("asset-rental", () => {
     );
 
     // Settlement of the in-flight rental still works while paused.
+    await waitForStart(immediate);
     await settleRental(program, {
       caller: ownerB.publicKey,
       listing: l2,
@@ -894,11 +949,12 @@ describe("asset-rental", () => {
 
     const rentalId = newRentalId();
     const [rental] = rentalPda(listing, rentalId);
+    const immediate = (await chainNow()) + 2;
     await createRental(program, {
       renter: renter.publicKey,
       listing,
       rentalId,
-      startTs: nowTs(),
+      startTs: immediate,
       days: 1,
       signers: [renter],
     });
@@ -908,6 +964,7 @@ describe("asset-rental", () => {
       "InvalidStatus"
     );
 
+    await waitForStart(immediate);
     await settleRental(program, {
       caller: ownerA.publicKey,
       listing,
@@ -946,7 +1003,8 @@ describe("asset-rental", () => {
         // Listing busy: exercise a terminal transition deterministically.
         const rental: PublicKey = l.currentRental;
         const r = await program.account.rentalAgreement.fetch(rental);
-        if (r.status === RENTAL_STATUS.Reserved || r.status === RENTAL_STATUS.Active) {
+        const code = statusCode(r.status);
+        if (code === RENTAL_STATUS.Reserved || code === RENTAL_STATUS.Active) {
           if (i % 4 === 1) {
             await raiseDispute(program, { party: owner.publicKey, listing, rental, signers: [owner] });
             await resolveDispute(program, {

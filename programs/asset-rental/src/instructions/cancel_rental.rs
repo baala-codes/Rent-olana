@@ -49,7 +49,6 @@ pub fn cancel_rental_handler(ctx: Context<CancelRental>) -> Result<()> {
     escrow::transfer_out(
         &ctx.accounts.rental,
         &ctx.accounts.renter_wallet.to_account_info(),
-        &ctx.accounts.system_program.to_account_info(),
         refund,
     )?;
 

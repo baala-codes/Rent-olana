@@ -79,19 +79,16 @@ pub fn settle_rental_handler(ctx: Context<SettleRental>) -> Result<()> {
     escrow::transfer_out(
         &ctx.accounts.rental,
         &ctx.accounts.owner_wallet.to_account_info(),
-        &ctx.accounts.system_program.to_account_info(),
         owner_amount,
     )?;
     escrow::transfer_out(
         &ctx.accounts.rental,
         &ctx.accounts.platform_treasury.to_account_info(),
-        &ctx.accounts.system_program.to_account_info(),
         fee,
     )?;
     escrow::transfer_out(
         &ctx.accounts.rental,
         &ctx.accounts.renter_wallet.to_account_info(),
-        &ctx.accounts.system_program.to_account_info(),
         deposit,
     )?;
 

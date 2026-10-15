@@ -1,0 +1,51 @@
+{
+  "scenario": "cancel",
+  "cluster": "devnet",
+  "programId": "9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo",
+  "signature": "4DUXqWsySs6Qx2jJxQXh1fTnG8kFH1Q3mPKxW9av7Qa4D6QR8GQ3Qsckn9LivV5hCjsdbrjTkDbuHRyTH39xAh9y",
+  "accounts": {
+    "l1": {
+      "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+      "exists": true,
+      "before": {
+        "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+        "exists": true,
+        "lamports": 2157600
+      },
+      "after": {
+        "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+        "exists": true,
+        "lamports": 2157600
+      }
+    },
+    "rental": {
+      "address": "Bf2bzJdiCYv7xwguyukkhUCLRZU1b8vriqbXF4LdbaRY",
+      "exists": true,
+      "before": {
+        "address": "Bf2bzJdiCYv7xwguyukkhUCLRZU1b8vriqbXF4LdbaRY",
+        "exists": false,
+        "lamports": 0
+      },
+      "after": {
+        "address": "Bf2bzJdiCYv7xwguyukkhUCLRZU1b8vriqbXF4LdbaRY",
+        "exists": true,
+        "lamports": 2199360
+      }
+    },
+    "renter": {
+      "address": "FJa2K3C7K8cpZcsMrMKufXHYanBggFxxTdYHd7KnRqnX",
+      "exists": true,
+      "before": {
+        "address": "FJa2K3C7K8cpZcsMrMKufXHYanBggFxxTdYHd7KnRqnX",
+        "exists": true,
+        "lamports": 4993401920
+      },
+      "after": {
+        "address": "FJa2K3C7K8cpZcsMrMKufXHYanBggFxxTdYHd7KnRqnX",
+        "exists": true,
+        "lamports": 4991202560
+      }
+    }
+  },
+  "capturedAt": "2026-10-15T12:55:04.478Z"
+}

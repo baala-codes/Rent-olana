@@ -11,10 +11,13 @@ use crate::state::AssetListing;
 pub struct SetListingStatus<'info> {
     pub owner: Signer<'info>,
 
+    // Seeds come from the account's stored `owner`, so a non-owner who passes
+    // the real listing account is rejected by `has_one = owner`
+    // (`NotListingOwner`) instead of a mismatched seed set.
     #[account(
         mut,
         has_one = owner @ RentalError::NotListingOwner,
-        seeds = [AssetListing::SEED_PREFIX, owner.key().as_ref(), listing.asset_id.as_ref()],
+        seeds = [AssetListing::SEED_PREFIX, listing.owner.as_ref(), listing.asset_id.as_ref()],
         bump = listing.bump,
     )]
     pub listing: Account<'info, AssetListing>,

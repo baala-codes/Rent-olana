@@ -1,0 +1,51 @@
+{
+  "scenario": "settle",
+  "cluster": "devnet",
+  "programId": "9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo",
+  "signature": null,
+  "accounts": {
+    "l2": {
+      "address": "7XcaJSCQN7gFpute1dqEuHYkbhjLQP99VK5x8c3gKwYJ",
+      "exists": true,
+      "before": {
+        "address": "7XcaJSCQN7gFpute1dqEuHYkbhjLQP99VK5x8c3gKwYJ",
+        "exists": true,
+        "lamports": 2157600
+      },
+      "after": {
+        "address": "7XcaJSCQN7gFpute1dqEuHYkbhjLQP99VK5x8c3gKwYJ",
+        "exists": true,
+        "lamports": 2157600
+      }
+    },
+    "rental": {
+      "address": "9hvG5n8nKEzNeMEoLRTvuq2vbRCnpEXqjRDgdsmbRasR",
+      "exists": false,
+      "before": {
+        "address": "9hvG5n8nKEzNeMEoLRTvuq2vbRCnpEXqjRDgdsmbRasR",
+        "exists": false,
+        "lamports": 0
+      },
+      "after": {
+        "address": "9hvG5n8nKEzNeMEoLRTvuq2vbRCnpEXqjRDgdsmbRasR",
+        "exists": false,
+        "lamports": 0
+      }
+    },
+    "treasury": {
+      "address": "HVqdizcco669bwFTKkdGM7ZZca3zUrsZFgsqVpakE7tF",
+      "exists": true,
+      "before": {
+        "address": "HVqdizcco669bwFTKkdGM7ZZca3zUrsZFgsqVpakE7tF",
+        "exists": true,
+        "lamports": 5000000000
+      },
+      "after": {
+        "address": "HVqdizcco669bwFTKkdGM7ZZca3zUrsZFgsqVpakE7tF",
+        "exists": true,
+        "lamports": 5000000000
+      }
+    }
+  },
+  "capturedAt": "2026-10-15T12:55:31.262Z"
+}

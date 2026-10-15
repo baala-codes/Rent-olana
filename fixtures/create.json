@@ -1,0 +1,37 @@
+{
+  "scenario": "create",
+  "cluster": "devnet",
+  "programId": "9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo",
+  "signature": "4cpi2k1JJCKYUtqvHESAjpNeNWr3gE3fEvFWiV7zdcqxCsPS7y7vvfzup7LKQewcjgFxyTA2Zi7FR3XdY3FgVJPJ",
+  "accounts": {
+    "l1": {
+      "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+      "exists": true,
+      "before": {
+        "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+        "exists": true,
+        "lamports": 2157600
+      },
+      "after": {
+        "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+        "exists": true,
+        "lamports": 2157600
+      }
+    },
+    "rental": {
+      "address": "Arf8HuUnCja2mVFUHiaWo5a7Pkj5MTH3RtFCKCEjjsBe",
+      "exists": true,
+      "before": {
+        "address": "Arf8HuUnCja2mVFUHiaWo5a7Pkj5MTH3RtFCKCEjjsBe",
+        "exists": false,
+        "lamports": 0
+      },
+      "after": {
+        "address": "Arf8HuUnCja2mVFUHiaWo5a7Pkj5MTH3RtFCKCEjjsBe",
+        "exists": true,
+        "lamports": 82199360
+      }
+    }
+  },
+  "capturedAt": "2026-10-15T12:53:30.191Z"
+}

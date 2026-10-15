@@ -63,13 +63,11 @@ pub fn resolve_dispute_handler(
     escrow::transfer_out(
         &ctx.accounts.rental,
         &ctx.accounts.owner_wallet.to_account_info(),
-        &ctx.accounts.system_program.to_account_info(),
         to_owner,
     )?;
     escrow::transfer_out(
         &ctx.accounts.rental,
         &ctx.accounts.renter_wallet.to_account_info(),
-        &ctx.accounts.system_program.to_account_info(),
         to_renter,
     )?;
 

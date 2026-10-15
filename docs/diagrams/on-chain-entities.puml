@@ -1,0 +1,68 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity "PlatformConfig (PDA)" as PlatformConfig {
+  * address : Pubkey <<derived: "config">>
+  --
+  admin : Pubkey
+  treasury : Pubkey
+  fee_bps : u16
+  paused : bool
+}
+
+entity "AssetListing (PDA)" as AssetListing {
+  * address : Pubkey <<derived: "asset", owner, asset_id>>
+  --
+  owner : Pubkey
+  asset_id : bytes32
+  category : u16
+  price_per_day : u64
+  deposit_lamports : u64
+  max_days : u16
+  metadata_hash : bytes32
+  active : bool
+  current_rental : Pubkey
+  busy_until : i64
+  total_rentals : u64
+  created_at : i64
+}
+
+entity "RentalAgreement (PDA)" as RentalAgreement {
+  * address : Pubkey <<derived: "rental", listing, rental_id>>
+  --
+  listing : Pubkey
+  owner : Pubkey
+  renter : Pubkey
+  rental_id : bytes32
+  start_ts : i64
+  end_ts : i64
+  days : u16
+  price_total : u64
+  deposit_lamports : u64
+  escrow_lamports : u64
+  status : RESERVED / ACTIVE / COMPLETED / CANCELLED / DISPUTED / RESOLVED
+  created_at : i64
+}
+
+PlatformConfig ||--o{ AssetListing : configures terms
+AssetListing ||--o{ RentalAgreement : is booked by
+AssetListing |o--|| RentalAgreement : "current_rental (0..1)"
+
+note bottom of PlatformConfig
+  Singleton: admin, treasury, fee_bps, and the pause switch.
+  Read for every settlement; no instruction accepts a
+  treasury or fee from the client.
+end note
+
+note bottom of AssetListing
+  One PDA per physical asset. Discovery fields are numeric
+  (category) plus a metadata hash; no PII or coordinates.
+end note
+
+note bottom of RentalAgreement
+  Durable escrow record created with `init`, so a reused
+  rental_id fails account creation (the replay guard).
+  Escrow moves only through settle, cancel, and resolve.
+end note
+@enduml

@@ -1,0 +1,74 @@
+@startuml
+hide circle
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 45
+
+package "Backend DB (mirror)" as LocalDB {
+  entity "Listing" as Listing {
+    * listing_address : Pubkey <<PK>>
+    --
+    owner : Pubkey
+    asset_id : bytes32
+    category : u16
+    price_per_day : u64
+    deposit_lamports : u64
+    max_days : u16
+    metadata_hash : bytes32
+    active : bool
+    busy_until : i64
+    last_synced_slot : u64
+  }
+
+  entity "Rental" as Rental {
+    * rental_address : Pubkey <<PK>>
+    --
+    listing_address : Pubkey <<FK>>
+    renter_wallet : Pubkey
+    start_ts : i64
+    end_ts : i64
+    price_total : u64
+    escrow_lamports : u64
+    status : enum
+    transaction_signature : string
+    last_synced_slot : u64
+  }
+
+  entity "MediaAsset" as Media {
+    * media_id : string <<PK>>
+    --
+    listing_address : Pubkey <<FK>>
+    object_key : string <<object storage>>
+    content_hash : bytes32
+    content_type : string
+  }
+}
+
+package "Audit log (file)" {
+  entity "AuditRecord" as Audit {
+    * record_id : string <<PK>>
+    --
+    entity_type : enum (LISTING / RENTAL / CONFIG)
+    entity_id : string
+    wallet : Pubkey [optional]
+    transition : enum
+    reason : string [optional]
+    recorded_at : timestamp
+  }
+}
+
+Listing ||--o{ Rental : is booked by
+Listing ||--o{ Media : has media
+Listing ..> Audit : logs transitions
+Rental ..> Audit : logs transitions
+
+note bottom of Rental
+  Mirrors the on-chain RentalAgreement for UX.
+  Reconciled against finalized reads after restarts;
+  never the source of truth for funds.
+end note
+
+note bottom of Audit
+  Local JSONL. No keys, secrets, or PII.
+end note
+@enduml

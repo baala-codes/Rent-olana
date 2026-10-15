@@ -1,0 +1,32 @@
+@startuml
+top to bottom direction
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam linetype polyline
+skinparam ArrowFontSize 12
+
+package "Client Entities" #EAF2FF {
+  component "Browser + Wallet\nPhantom / Solflare" as Browser #EAF2FF
+}
+package "Provider Backend" #EAF7ED {
+  component "Search Index / Media / Rental Mirror\n(off-chain truth for UX)" as Backend #EAF7ED
+}
+package "Solana Services" #EDE4FF {
+  component "RPC + asset-rental program + accounts" as Solana #EDE4FF
+}
+
+Browser -[dashed]down-> Backend : Search / listing APIs
+Browser -[dashed]down--> Solana : Signed transactions
+Backend -[dashed]down-> Solana : Read finalized state + mirror
+
+legend bottom
+  |= Color |= Meaning |
+  |<#EAF2FF> Light blue | Client entities |
+  |<#EAF7ED> Light green | Provider backend |
+  |<#EDE4FF> Light purple | Solana services, programs, and accounts |
+endlegend
+@enduml

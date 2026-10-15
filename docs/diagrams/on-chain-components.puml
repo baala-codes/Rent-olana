@@ -1,0 +1,51 @@
+@startuml
+top to bottom direction
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam linetype polyline
+skinparam ArrowFontSize 12
+
+package "Client Entities" #EAF2FF {
+  component "Browser + Wallet" as Browser #EAF2FF
+}
+package "Provider Backend" #EAF7ED {
+  component "Rental Mirror / Reconciler" as Backend #EAF7ED
+}
+component "Solana RPC Service" as RPC #EDE4FF
+package "Solana Runtime" #EDE4FF {
+  interface "Rental Instructions" as Instructions #EDE4FF
+  component "asset-rental Program" as Program #EDE4FF
+  artifact "Program-Owned Account State" as Accounts #EDE4FF
+  component "System Program" as System #EDE4FF
+  artifact "Platform Treasury" as Treasury #EDE4FF
+}
+
+Browser -[dashed]down-> RPC : Submit signed listing / booking / settle txs
+Backend -[dashed]down-> RPC : Read finalized listings / rentals
+RPC -[dashed]down-> Instructions : Submit to runtime
+Program -up- Instructions
+RPC -[dashed]down--> Accounts : Read account state
+Program -[dashed]right-> Accounts : Write listing / rental state
+Program -[dashed]down-> System : Escrow transfer in / payout out
+System -[dashed]right-> Treasury : Credit platform fee
+
+note bottom of Accounts
+  PlatformConfig / AssetListing / RentalAgreement.
+  Solana is the source of truth for funds and rental state.
+end note
+note bottom of Treasury
+  Escrow is price + deposit per rental.
+  Only settle, cancel, and resolve-dispute move funds.
+end note
+
+legend bottom
+  |= Color |= Meaning |
+  |<#EAF2FF> Light blue | Client entities |
+  |<#EAF7ED> Light green | Provider backend |
+  |<#EDE4FF> Light purple | Solana services, programs, and accounts |
+endlegend
+@enduml

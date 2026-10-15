@@ -1,0 +1,30 @@
+{
+  "name": "asset-rental-program",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Anchor workspace for the asset-rental physical-asset rental marketplace program",
+  "scripts": {
+    "build": "anchor build",
+    "test": "anchor test",
+    "test:localnet": "anchor test --provider.cluster localnet",
+    "test:devnet": "anchor test --provider.cluster devnet",
+    "keys:sync": "anchor keys sync",
+    "clients:export": "bash scripts/export-clients.sh"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.30.1",
+    "@solana/web3.js": "^1.95.3"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.1.5",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^18.19.0",
+    "chai": "^4.3.10",
+    "mocha": "^9.2.2",
+    "prettier": "^2.8.8",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^5.4.5"
+  }
+}

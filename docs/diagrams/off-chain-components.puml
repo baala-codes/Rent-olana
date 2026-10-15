@@ -1,0 +1,49 @@
+@startuml
+top to bottom direction
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam nodesep 80
+skinparam ranksep 80
+skinparam linetype polyline
+skinparam ArrowFontSize 12
+
+package "Client Entities" #EAF2FF {
+  component "Browser Portal\nListing CRUD / Search / Booking" as Browser #EAF2FF
+}
+package "Backend Process" #EAF7ED {
+  interface "Portal API" as WebAPI #EAF7ED
+  component "Search Index\nGeo + category" as Search #EAF7ED
+  component "Media Storage\nImages + metadata" as Media #EAF7ED
+  component "Rental Mirror\nListings + orders" as Mirror #EAF7ED
+  component "Reconciler\nFinalized reads" as Reconciler #EAF7ED
+  database "SQLite / Postgres" as DB #EAF7ED
+}
+package "Solana Services" #EDE4FF {
+  component "Solana RPC\nRental state" as RPC #EDE4FF
+}
+
+Browser -[dashed]down-> WebAPI : Listing / search / booking requests
+WebAPI -up- Search
+WebAPI -up- Media
+WebAPI -up- Mirror
+Search -[dashed]down-> DB : Indexed listings
+Mirror -[dashed]down-> DB : Mirrored listings + rentals
+Media -[dashed]down-> DB : Object keys + metadata hash
+Reconciler -[dashed]down-> RPC : Read finalized accounts
+Reconciler -[dashed]up-> Mirror : Reconcile after restart
+Browser -[dashed]down--> RPC : Submit signed transactions
+
+note bottom of Mirror
+  The mirror is a disposable view for search and UX.
+  It never decides fund movement.
+end note
+
+legend bottom
+  |= Color |= Meaning |
+  |<#EAF2FF> Light blue | Client entities |
+  |<#EAF7ED> Light green | Provider backend |
+  |<#EDE4FF> Light purple | Solana services, programs, and accounts |
+endlegend
+@enduml

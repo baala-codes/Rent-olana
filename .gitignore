@@ -1,0 +1,17 @@
+# Build output
+target/
+.anchor/
+
+# Local deploy/authority keypairs (never commit devnet or provider wallets)
+.keys/
+
+# Node / test harness
+node_modules/
+test-ledger/
+.nyc_output/
+
+# Editors and OS noise
+.DS_Store
+*.log
+__pycache__/
+*.pyc

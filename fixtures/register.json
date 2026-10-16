@@ -1,37 +1,37 @@
 {
   "scenario": "register",
-  "cluster": "devnet",
-  "programId": "9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo",
+  "cluster": "localnet",
+  "programId": "DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ",
   "signature": null,
   "accounts": {
     "l1": {
-      "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+      "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
       "exists": true,
       "before": {
-        "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+        "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
         "exists": true,
         "lamports": 2157600
       },
       "after": {
-        "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+        "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
         "exists": true,
         "lamports": 2157600
       }
     },
     "l2": {
-      "address": "7XcaJSCQN7gFpute1dqEuHYkbhjLQP99VK5x8c3gKwYJ",
+      "address": "FHA2YwDi3UFLVqNf2iEb2orgubGuDe41xaePzAJj7AsT",
       "exists": true,
       "before": {
-        "address": "7XcaJSCQN7gFpute1dqEuHYkbhjLQP99VK5x8c3gKwYJ",
+        "address": "FHA2YwDi3UFLVqNf2iEb2orgubGuDe41xaePzAJj7AsT",
         "exists": true,
         "lamports": 2157600
       },
       "after": {
-        "address": "7XcaJSCQN7gFpute1dqEuHYkbhjLQP99VK5x8c3gKwYJ",
+        "address": "FHA2YwDi3UFLVqNf2iEb2orgubGuDe41xaePzAJj7AsT",
         "exists": true,
         "lamports": 2157600
       }
     }
   },
-  "capturedAt": "2026-10-15T12:52:49.763Z"
+  "capturedAt": "2026-10-16T08:36:08.341Z"
 }

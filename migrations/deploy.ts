@@ -16,7 +16,7 @@ import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { join } from "path";
 
-const DEFAULT_TREASURY = "23Y75gsoeTF68uMxPVZ6TtMfL6a73bDouxLJLRZ6kTeX";
+const DEFAULT_TREASURY = "8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr";
 const DEFAULT_FEE_BPS = 250;
 
 module.exports = async function (provider: anchor.AnchorProvider) {

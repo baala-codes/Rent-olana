@@ -74,6 +74,20 @@ const program: any = new anchor.Program(
   provider
 );
 
+/**
+ * The cluster the suite is actually running against. `anchor test` exports
+ * `ANCHOR_PROVIDER_URL` for the selected cluster, so derive the fixture label
+ * from it rather than from the devnet-configured `CLUSTER` constant; otherwise
+ * a localnet run would write fixtures that claim to be devnet.
+ */
+const clusterLabel = ((): string => {
+  const url = process.env.ANCHOR_PROVIDER_URL ?? RPC_URL;
+  if (/127\.0\.0\.1|localhost/.test(url)) return "localnet";
+  if (url.includes("devnet")) return "devnet";
+  if (url.includes("mainnet")) return "mainnet";
+  return CLUSTER;
+})();
+
 const nowTs = (): number => Math.floor(Date.now() / 1000);
 
 const waitFinalized = async (signature: TransactionSignature): Promise<void> => {
@@ -105,6 +119,17 @@ const chainNow = async (): Promise<number> => {
  * slot; START_EXTRA covers that lag before a time-gated call is attempted.
  */
 const START_EXTRA = Number(process.env.START_EXTRA ?? 2);
+
+/**
+ * Headroom for a rental that is meant to start "immediately". `create_rental`
+ * requires `start_ts >= Clock::get()`, and the transaction is built/sent after
+ * that timestamp is chosen, so `start_ts` must leave enough room for the
+ * transaction to land while the chain clock is still before it. A 2-second
+ * margin raced the clock and made these bookings revert with `StartInPast`
+ * before any assertion ran. `waitForStart` waits the margin out before any
+ * time-gated call.
+ */
+const START_MARGIN = Number(process.env.START_MARGIN ?? 30);
 const waitForStart = async (ts: number): Promise<void> => {
   while ((await chainNow()) < ts + START_EXTRA) {
     await new Promise((resolve) => setTimeout(resolve, 400));
@@ -180,7 +205,7 @@ async function scenario(
       JSON.stringify(
         {
           scenario: name,
-          cluster: CLUSTER,
+          cluster: clusterLabel,
           programId: PROGRAM_ID.toBase58(),
           signature,
           accounts,
@@ -447,7 +472,10 @@ describe("asset-rental", () => {
   it("replay: a reused rental_id fails account creation with no double charge", async () => {
     const rentalId = newRentalId();
     const [rental] = rentalPda(l2, rentalId);
-    const start = (await chainNow()) + 2;
+    // This case only exercises duplicate-id rejection and the pre-start refund,
+    // so the booking can start far in the future: it must stay "pre-start"
+    // through the extra confirmation round-trips before the cancel.
+    const start = nowTs() + 3_600;
 
     await createRental(program, {
       renter: renter.publicKey,
@@ -560,7 +588,7 @@ describe("asset-rental", () => {
     const [mismatchRental] = rentalPda(l2, mismatchId);
     // Anchor on the chain clock: the rental must start on-chain before the
     // owner can settle it.
-    const immediate = (await chainNow()) + 2;
+    const immediate = (await chainNow()) + START_MARGIN;
     await createRental(program, {
       renter: renter.publicKey,
       listing: l2,
@@ -636,7 +664,7 @@ describe("asset-rental", () => {
   it("cancel: post-start cancellation is denied", async () => {
     const rentalId = newRentalId();
     const [rental] = rentalPda(l2, rentalId);
-    const immediate = (await chainNow()) + 2;
+    const immediate = (await chainNow()) + START_MARGIN;
     await createRental(program, {
       renter: renter.publicKey,
       listing: l2,
@@ -677,7 +705,7 @@ describe("asset-rental", () => {
     const days = 2;
     const priceTotal = L2_PRICE * days;
     const fee = Math.floor((priceTotal * 250) / 10_000);
-    const immediate = (await chainNow()) + 2;
+    const immediate = (await chainNow()) + START_MARGIN;
 
     await scenario("settle", { l2, rental, treasury: treasury.publicKey }, async () => {
       await createRental(program, {
@@ -693,6 +721,7 @@ describe("asset-rental", () => {
       const treasuryBefore = await balance(treasury.publicKey);
       const renterBefore = await balance(renter.publicKey);
       const ownerBefore = await balance(ownerB.publicKey);
+      const adminBefore = await balance(admin.publicKey);
 
       const { signature } = await settleRental(program, {
         caller: ownerB.publicKey,
@@ -712,10 +741,21 @@ describe("asset-rental", () => {
         L2_DEPOSIT,
         "deposit exact"
       );
+      // `rpc()` sends with the provider wallet (admin) as the fee payer, so the
+      // owner's delta is exactly the program's owner_amount. Subtracting the
+      // transaction fee here would charge the owner a fee it never pays.
       assert.equal(
         (await balance(ownerB.publicKey)) - ownerBefore,
-        priceTotal - fee - txFee,
+        priceTotal - fee,
         "owner receives price - fee"
+      );
+      // The provider wallet, not the caller, pays the fee. Its delta is compared
+      // with `<=` because admin is also the fee payer for the booking earlier in
+      // this case, so the exact delta is not observable from balance snapshots
+      // alone; what matters is that the caller never pays it (owner delta above).
+      assert.ok(
+        (await balance(admin.publicKey)) - adminBefore <= -txFee,
+        "the provider wallet pays the transaction fee, not the caller"
       );
       assert.equal(await balance(rental), rentMin, "escrow fully drained");
 
@@ -893,7 +933,7 @@ describe("asset-rental", () => {
   it("pause: blocks new rentals, existing rentals still settle", async () => {
     const rentalId = newRentalId();
     const [rental] = rentalPda(l2, rentalId);
-    const immediate = (await chainNow()) + 2;
+    const immediate = (await chainNow()) + START_MARGIN;
 
     await createRental(program, {
       renter: renter.publicKey,
@@ -949,7 +989,7 @@ describe("asset-rental", () => {
 
     const rentalId = newRentalId();
     const [rental] = rentalPda(listing, rentalId);
-    const immediate = (await chainNow()) + 2;
+    const immediate = (await chainNow()) + START_MARGIN;
     await createRental(program, {
       renter: renter.publicKey,
       listing,

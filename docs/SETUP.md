@@ -149,7 +149,7 @@ if the config account already exists it logs the current values and returns.
 Verify:
 
 ```bash
-solana program show 9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo --url devnet
+solana program show DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ --url devnet
 ```
 
 The first deploy must happen **before** the IDL accounts for a deployed
@@ -164,7 +164,7 @@ Keep this table current, and add the signature of a real
 | Item | Value |
 | --- | --- |
 | Cluster | `devnet` |
-| Program ID | `9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo` |
+| Program ID | `DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ` |
 | Deployment tx | *(pending — record `anchor deploy` output here)* |
 | `initialize_config` tx | *(pending — record from the migration output)* |
 | register/book/settle tx | *(pending — record from a devnet run)* |
@@ -174,12 +174,12 @@ gitignored):
 
 | Key | Public key |
 | --- | --- |
-| `admin` | `np5kia37PppeDxjgcsYFfzFLFKjqtbwwWWTVLPbGBWZ` |
-| `treasury` | `23Y75gsoeTF68uMxPVZ6TtMfL6a73bDouxLJLRZ6kTeX` |
-| `owner_a` | `9gTnxZ79SYJ4tNsXGcmd3QbnBvo1y8GPXr2wguMUo1Ky` |
-| `owner_b` | `4Y697sX263oMcE2J8MKsGaVWya8Mu1kJTpA2JLE7ngHg` |
-| `renter` | `2C6fcSpXGAVdoQivDAB3uR6M3uzJkmSMdJoSuDHNUKWF` |
-| `program` | `9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo` |
+| `admin` | `D3kN3a8rqjZZmkgT9HNa6MvSmXBryp58XCP2uV37LMnq` |
+| `treasury` | `8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr` |
+| `owner_a` | `8NJHN1kPzbKC7j5HwonjAY65rH5TdWMaevPwiGUEC8Yc` |
+| `owner_b` | `9oQip5maa54t9zVHDHt13mQuWDEQt6ALMb3dBaVg6AsX` |
+| `renter` | `BJicrqS5cSQZzoDUdTJyDdKaUrautBSEWLzbCv2qF5TW` |
+| `program` | `DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ` |
 
 ## 7. A live devnet fixture
 

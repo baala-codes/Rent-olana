@@ -6,7 +6,7 @@ One worked example per instruction: the arguments, the exact account list in
 declaration order, and what changes on chain. Examples use the helpers in
 [`clients/ts/`](../clients/ts/), which derive every PDA for you.
 
-Program ID used below: `9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo` (devnet).
+Program ID used below: `DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ` (devnet).
 `admin`, `owner`, and `renter` are wallets; `treasury` only receives.
 
 ## 0. Setup shared by every example

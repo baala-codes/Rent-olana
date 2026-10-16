@@ -1,51 +1,51 @@
 {
   "scenario": "dispute",
-  "cluster": "devnet",
-  "programId": "9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo",
-  "signature": "5VcCMhoBrSovPjxepX6Cewc5tvcRwdXcXLVkR753tc7oz1VgmiBAgdSytRMtdYcPpqnzThNdTrRcbGiNjqwtEMUV",
+  "cluster": "localnet",
+  "programId": "DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ",
+  "signature": "5NGfXXUJXqr9CZZMysnVjRiuSACrB6sSstbGSyqppDMkUm95q2uo4gMmoXVTuGoKxh6wwA4uM8UBsHLeRJgW9iCG",
   "accounts": {
     "l1": {
-      "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+      "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
       "exists": true,
       "before": {
-        "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+        "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
         "exists": true,
         "lamports": 2157600
       },
       "after": {
-        "address": "5eJ5Dz4bkXUwGwsaguF84GAMfdyVn1tcs6gRF6K61B28",
+        "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
         "exists": true,
         "lamports": 2157600
       }
     },
     "rental": {
-      "address": "6XZVWJL92ypsPUWMf7fNuA32dUemNv5qGMRqfn22jTVH",
+      "address": "243VJoaPwBxiBSwgW3gzcc8fHvvFdcWbf2aM5ejpTrcS",
       "exists": true,
       "before": {
-        "address": "6XZVWJL92ypsPUWMf7fNuA32dUemNv5qGMRqfn22jTVH",
+        "address": "243VJoaPwBxiBSwgW3gzcc8fHvvFdcWbf2aM5ejpTrcS",
         "exists": false,
         "lamports": 0
       },
       "after": {
-        "address": "6XZVWJL92ypsPUWMf7fNuA32dUemNv5qGMRqfn22jTVH",
+        "address": "243VJoaPwBxiBSwgW3gzcc8fHvvFdcWbf2aM5ejpTrcS",
         "exists": true,
         "lamports": 2199360
       }
     },
     "treasury": {
-      "address": "HVqdizcco669bwFTKkdGM7ZZca3zUrsZFgsqVpakE7tF",
+      "address": "8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr",
       "exists": true,
       "before": {
-        "address": "HVqdizcco669bwFTKkdGM7ZZca3zUrsZFgsqVpakE7tF",
+        "address": "8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr",
         "exists": true,
-        "lamports": 5000000000
+        "lamports": 5000500000
       },
       "after": {
-        "address": "HVqdizcco669bwFTKkdGM7ZZca3zUrsZFgsqVpakE7tF",
+        "address": "8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr",
         "exists": true,
-        "lamports": 5000000000
+        "lamports": 5000500000
       }
     }
   },
-  "capturedAt": "2026-10-15T12:56:38.687Z"
+  "capturedAt": "2026-10-16T08:41:45.763Z"
 }

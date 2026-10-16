@@ -9,7 +9,7 @@ skip-lint = false
 asset_rental = "DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ"
 
 [programs.localnet]
-asset_rental = "9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo"
+asset_rental = "DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ"
 
 [registry]
 url = "https://api.apr.dev"

@@ -46,6 +46,17 @@ avm install "${ANCHOR_VERSION}" || echo "    (already installed, switching)"
 avm use "${ANCHOR_VERSION}"
 export PATH="$HOME/.avm/bin:$PATH"
 
+# anchor 0.30.1's IDL build exports RUSTUP_TOOLCHAIN=nightly itself, and the
+# current generic nightly cannot compile this workspace's locked proc-macro2.
+# nightly-2025-01-15 is the newest nightly that builds the whole workspace; it is
+# pinned in rust-toolchain.toml and used by scripts/anchor.sh.
+echo "==> Rust nightly-2025-01-15 (host toolchain for the IDL build)"
+if rustup toolchain list | grep -q '^nightly-2025-01-15'; then
+  echo "    already installed"
+else
+  rustup toolchain install nightly-2025-01-15 --profile minimal
+fi
+
 echo
 echo "==> Versions"
 anchor --version
@@ -58,8 +69,12 @@ Add the following to your shell profile so future shells see the toolchain:
 
   export PATH="\$HOME/.cargo/bin:\$HOME/.local/share/solana/install/active_release/bin:\$HOME/.avm/bin:\$PATH"
 
-Then:
+Then (use the wrapper so the IDL build picks the pinned toolchain):
 
-  anchor build
-  anchor test --provider.cluster localnet
+  bash scripts/anchor.sh build
+  bash scripts/anchor.sh test --provider.cluster localnet
+
+or the equivalent npm scripts: \`npm run build\`, \`npm run test:localnet\`.
+Calling \`anchor build\` directly fails at the IDL step unless RUSTUP_TOOLCHAIN is
+set (see the "Toolchain pin" section of docs/SETUP.md).
 EOF

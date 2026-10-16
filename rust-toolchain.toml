@@ -1,0 +1,17 @@
+# Pin the host Rust toolchain for this workspace.
+#
+# Anchor 0.30.1's IDL build sets `RUSTFLAGS=--cfg procmacro2_semver_exempt` (the
+# flag is baked into the `anchor` binary) so that `proc_macro2::Span::source_file`
+# is available to `anchor-syn`. That method is gated in proc-macro2 1.0.94 by
+# `cfg(all(procmacro2_semver_exempt, any(not(wrap_proc_macro), super_unstable)))`,
+# so the IDL build only compiles on a nightly compiler that still exposes
+# `proc_macro::SourceFile` (removed from rustc after the 1.85 series).
+#
+# On stable/newer toolchains the IDL step fails with:
+#   error[E0599]: no method named `source_file` found for struct `proc_macro2::Span`
+#   error[E0425]: cannot find type `SourceFile` in crate `proc_macro`
+#
+# `cargo build-sbf` uses the `solana` toolchain bundled with the platform-tools
+# release and ignores this pin, so the SBF artifact is unaffected.
+[toolchain]
+channel = "nightly-2025-01-15"

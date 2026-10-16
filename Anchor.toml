@@ -5,17 +5,17 @@ anchor_version = "0.30.1"
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-asset_rental = "9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo"
-
 [programs.devnet]
+asset_rental = "DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ"
+
+[programs.localnet]
 asset_rental = "9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "Devnet"
 wallet = ".keys/admin.json"
 
 [scripts]

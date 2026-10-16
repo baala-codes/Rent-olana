@@ -5,11 +5,12 @@
   "license": "MIT",
   "description": "Anchor workspace for the asset-rental physical-asset rental marketplace program",
   "scripts": {
-    "build": "anchor build",
-    "test": "anchor test",
-    "test:localnet": "anchor test --provider.cluster localnet",
-    "test:devnet": "anchor test --provider.cluster devnet",
-    "keys:sync": "anchor keys sync",
+    "build": "bash scripts/anchor.sh build",
+    "test": "bash scripts/anchor.sh test",
+    "test:localnet": "bash scripts/anchor.sh test --provider.cluster localnet",
+    "test:devnet": "bash scripts/anchor.sh test --provider.cluster devnet",
+    "keys:sync": "bash scripts/anchor.sh keys sync",
+    "deploy:devnet": "bash scripts/anchor.sh deploy --provider.cluster devnet",
     "clients:export": "bash scripts/export-clients.sh"
   },
   "dependencies": {

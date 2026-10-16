@@ -10,7 +10,7 @@ import { PublicKey } from "@solana/web3.js";
  */
 
 /** Program ID (devnet). Must equal `declare_id!` in lib.rs. */
-export const PROGRAM_ID = new PublicKey("9CN7pM6aw4aYiNb5h715tvE7xeLA31WXMVbUcpmYohxo");
+export const PROGRAM_ID = new PublicKey("DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ");
 
 /** Cluster this portal is configured for. */
 export const CLUSTER = "devnet" as const;

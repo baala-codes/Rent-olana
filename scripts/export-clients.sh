@@ -22,8 +22,10 @@ for tool in anchor cargo; do
   fi
 done
 
+# Go through the wrapper so the IDL build runs on a toolchain that can compile
+# this workspace's locked dependencies (see scripts/anchor.sh).
 echo "==> anchor build"
-anchor build
+bash "$ROOT/scripts/anchor.sh" build
 
 IDL="target/idl/asset_rental.json"
 TYPES="target/types/asset_rental.ts"

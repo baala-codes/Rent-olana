@@ -31,9 +31,13 @@ validator-free suite uses `tsx` and works on both.
 - `bookStartingSoon()` — books a near-future start and retries only on
   `StartInPast`, reusing the same `rental_id`; there is no fixed start margin.
 
-Before hook: initialize config (fee 250 bps) and register two listings
-(`L1`: price 10_000_000/day, deposit 50_000_000, max_days 30; `L2`: price
-5_000_000/day, deposit 0, max_days 5).
+Before hook: initialize config (fee 250 bps), fund each role wallet with **0.05
+SOL**, and register two demo listings (`L1`: price 5_000_000/day = 0.005 SOL,
+deposit 10_000_000 = 0.01 SOL, max_days 30; `L2`: price 2_500_000/day = 0.0025
+SOL, deposit 0, max_days 5). L1's most expensive case, a 3-day booking, escrows
+0.025 SOL — comfortably inside the 0.05 SOL per-wallet budget. After each case
+(and inside the fuzz loop) the harness closes terminal rentals, returning their
+rent-exempt lamports to the renter so the same budget is reused.
 
 ## Coverage
 

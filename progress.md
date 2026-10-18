@@ -87,9 +87,10 @@ needs one run on a toolchain host".
 ## Real blockers and open items
 
 1. **Devnet SOL.** Deploying and running the devnet acceptance suite still needs a
-   funded wallet set. The public faucet is exhausted for the author's IP; fund
-   `admin` with roughly 25 SOL (or ~3 SOL plus per-wallet funding and lower the
-   suite's `fund()` amounts) and run:
+   funded wallet set. The public faucet is exhausted for the author's IP. The
+   suite now funds each role wallet with **0.05 SOL** (`fund()`), so the tests
+   themselves need only ~0.2 SOL; fund `admin` with whatever the faucet gives
+   (up to 1 SOL) plus enough for deployment rent, then run:
    ```bash
    bash scripts/anchor.sh deploy --provider.cluster devnet
    bash scripts/anchor.sh test --provider.cluster devnet

@@ -100,8 +100,8 @@ function RegisterForm() {
   const { publicKey } = useWallet();
 
   const [category, setCategory] = useState(1);
-  const [priceSol, setPriceSol] = useState("0.01");
-  const [depositSol, setDepositSol] = useState("0.05");
+  const [priceSol, setPriceSol] = useState("0.005");
+  const [depositSol, setDepositSol] = useState("0.01");
   const [maxDays, setMaxDays] = useState(30);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -204,7 +204,7 @@ function RegisterForm() {
             onChange={(e) => setMaxDays(Number(e.target.value) || 1)}
           />
         </Field>
-        <Field label="price per day (SOL)" hint="charged on settlement, minus the platform fee">
+        <Field label="price per day (SOL)" hint="demo pricing: 0.005/day; 3 days + 0.01 deposit = 0.025 SOL">
           <input value={priceSol} onChange={(e) => setPriceSol(e.target.value)} inputMode="decimal" />
         </Field>
         <Field label="deposit (SOL)" hint="refunded to the renter on every terminal path">

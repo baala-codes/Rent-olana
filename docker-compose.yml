@@ -1,0 +1,31 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      CLUSTER: ${CLUSTER:-devnet}
+      RPC_URL: ${RPC_URL:-https://api.devnet.solana.com}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-dev-only-token}
+      SYNC_ON_START: ${SYNC_ON_START:-1}
+      SYNC_INTERVAL_MS: ${SYNC_INTERVAL_MS:-60000}
+      CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
+      NOTIFY_WEBHOOK_URL: ${NOTIFY_WEBHOOK_URL:-}
+    ports:
+      - "8787:8787"
+    volumes:
+      - mirror-data:/data
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8787}
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  mirror-data:

@@ -15,6 +15,8 @@ import {
   todayDateInput,
 } from "../solana/format";
 import { Card, Notice } from "../components/ui";
+import { AvailabilityCalendar } from "../components/AvailabilityCalendar";
+import { resolveMediaUrl } from "../api/client";
 
 /** Persist the pending rental id before signing so a retry never double-charges. */
 const pendingKey = (listing: string) => `rent-olana:pending-rental:${listing}`;
@@ -135,7 +137,7 @@ export function ListingDetailView({
       <div className="layout">
         <Card title={meta?.name ?? categoryLabel(listing.category)}>
           {meta?.images?.[0] ? (
-            <img className="asset-thumb" src={meta.images[0]} alt={meta.name} />
+            <img className="asset-thumb" src={resolveMediaUrl(meta.images[0])} alt={meta.name} />
           ) : (
             <div className="asset-thumb placeholder" style={{ marginBottom: 12 }}>
               no photo · metadata {shortId(listing.metadataHash, 6)}
@@ -230,6 +232,8 @@ export function ListingDetailView({
               You cannot rent your own asset. Manage it from <strong>my listings</strong>.
             </Notice>
           ) : null}
+
+          <AvailabilityCalendar listing={listing} selectedDate={startDate} onSelect={setStartDate} />
 
           <div className="form-grid">
             <label className="field">

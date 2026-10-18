@@ -1,6 +1,12 @@
 import type { Program } from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
-import { Keypair, PublicKey, SystemProgram, type TransactionSignature } from "@solana/web3.js";
+import {
+  ComputeBudgetProgram,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  type TransactionSignature,
+} from "@solana/web3.js";
 import { randomBytes } from "crypto";
 
 import { configPda, listingPda, rentalPda, toBytes32, type Bytes32 } from "./pda";
@@ -39,8 +45,8 @@ const methods = (program: RentalProgram): any => program.methods as any;
  * signature are discarded, leaving only `Unknown action 'undefined'`.
  *
  * When that happens we re-simulate the same builder. Simulation needs neither a
- * signature nor a blockhash (`replaceRecentBlockhash`), so it reproduces the
- * program logs without moving any funds or requiring a second approval.
+ * signature nor a caller-supplied blockhash, so it reproduces the program logs
+ * without moving any funds or requiring a second approval.
  */
 async function send(program: RentalProgram, builder: any): Promise<TransactionSignature> {
   try {
@@ -57,14 +63,35 @@ async function recoverSimulationLogs(
 ): Promise<{ message: string; logs: string[] } | null> {
   try {
     const transaction = await builder.transaction();
-    const simulation = await program.provider.connection.simulateTransaction(transaction, {
-      replaceRecentBlockhash: true,
-      sigVerify: false,
-    });
+    // `builder.transaction()` leaves the fee payer unset until `rpc()` fills it
+    // from the provider, so set it before compiling the simulation message.
+    transaction.feePayer ??= program.provider.wallet.publicKey;
+    // The failed send already registered this exact signature with the RPC, and
+    // re-simulating it returns `AlreadyProcessed` with no logs. A fresh
+    // blockhash and an empty signature list make the simulation message unique.
+    const { blockhash } = await program.provider.connection.getLatestBlockhash("confirmed");
+    transaction.recentBlockhash = blockhash;
+    transaction.signatures = [];
+    // Some RPC nodes dedupe a simulation whose message matches an already
+    // processed transaction, returning `AlreadyProcessed` with no logs. A
+    // unique compute-budget instruction makes this message different without
+    // changing program behavior.
+    transaction.add(
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 + (Date.now() % 1_000) })
+    );
+    // web3.js 1.95.3's legacy `simulateTransaction` takes `(tx, signers?,
+    // commitment?)`, not an RPC config object — passing one throws "Invalid
+    // arguments". It does not verify signatures during simulation, so no signer
+    // is needed.
+    const simulation = await program.provider.connection.simulateTransaction(transaction);
     const logs = simulation.value.logs ?? [];
+    if (logs.length === 0 && process.env.DEBUG_RECOVERY) {
+      console.error("recoverSimulationLogs: simulation returned no logs", simulation.value);
+    }
     return logs.length > 0 ? { message: simulation.value.err?.toString() ?? "simulation failed", logs } : null;
-  } catch {
+  } catch (error) {
     // Simulation is best-effort diagnostics; fall back to the original error.
+    if (process.env.DEBUG_RECOVERY) console.error("recoverSimulationLogs failed", error);
     return null;
   }
 }

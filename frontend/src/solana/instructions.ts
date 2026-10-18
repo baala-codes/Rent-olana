@@ -7,6 +7,9 @@
  */
 
 export {
+  configPda,
+  listingPda,
+  rentalPda,
   ixInitializeConfig,
   ixSetConfig,
   ixRegisterAsset,

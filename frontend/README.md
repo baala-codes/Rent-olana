@@ -19,9 +19,16 @@ movement — the program does. This is the "portal" half of the frontend stream 
   adapters — exactly the wallets the architecture names.
 - Reads go straight to **devnet** (`https://api.devnet.solana.com`).
 
-The portal is **self-contained**: no backend is required. Listing discovery uses
-`getProgramAccounts`, and the off-chain half of a listing (name, description,
-photo, location) is kept locally — see below.
+The portal prefers the **backend index** for discovery, metadata, and media when
+it is reachable (`VITE_API_URL`, default `http://127.0.0.1:8787`). If the backend
+is offline or still empty, it falls back to direct `getProgramAccounts` reads and
+the browser-local metadata store, so booking and settlement keep working as a
+static bundle. Set `VITE_API_URL=off` to force the RPC-only mode.
+
+The backend must be running and synced (`POST /v1/admin/sync`, or
+`SYNC_ON_START=1`) for shared listings to appear. Metadata and media writes are
+wallet-signed; media uploads appear after the owner saves and commits the new
+`metadata_hash`.
 
 ## Running it
 
@@ -38,8 +45,8 @@ Other scripts: `npm run build` (typecheck + production bundle to `dist/`),
 
 | Tab | Behaviour |
 | --- | --- |
-| **market** | Reads every `AssetListing` from devnet with search (name/asset id/owner/category/location), a category filter, and an availability filter. Loads with skeletons. Selecting a row opens the booking form. |
-| **my listings** | Owners register an asset with its off-chain document, then activate/deactivate, edit terms, edit metadata, or close. Economic terms are disabled on-chain while a rental holds the listing. |
+| **market** | Searches listings through the backend index (text, category, availability, latitude/longitude/radius) and falls back to RPC reads with client-side filtering. A source badge shows which path served the last read. Selecting a row opens the booking form. |
+| **my listings** | Owners register an asset with its off-chain document, publish that document and an optional photo to the backend, then activate/deactivate, edit terms, edit metadata, or close. Economic terms are disabled on-chain while a rental holds the listing. |
 | **rentals** | Every rental where the connected wallet is owner or renter, with the actions valid *right now*: pre-start **cancel**, **dispute**, **settle** (owner gate, or permissionless after `end + 24h`), admin **resolve**, and **close** to reclaim rent. |
 | **admin** | Initialise the platform config once, update treasury/fee/pause, and resolve the dispute queue. |
 
@@ -94,6 +101,13 @@ off-chain, and the portal implements that half faithfully:
   rental is open — matching the contract, where the hash and category are the
   two always-mutable fields.
 
+## Availability calendar
+
+`AvailabilityCalendar` renders the next 28 days from the listing's on-chain
+`busy_until` watermark: days before it are booked, days after it are selectable
+and set the booking start date. The program has no interval set, so this is an
+exact view of what the program will accept.
+
 ## Booking is persist-before-submit
 
 The booking flow mints a fresh 32-byte `rental_id`, **writes it to
@@ -130,11 +144,11 @@ src/
 - **The program is not deployed yet**, so live reads return zero accounts and
   every list shows an empty state. The portal is wired for a deployed program and
   will populate the moment one exists.
-- Discovery still reads `getProgramAccounts` directly. The backend in
-  [`../backend/`](../backend/) provides the geo/category index and shared
-  metadata/media, but this portal does not call it yet; metadata falls back to
-  per-browser `localStorage`.
+- Backend search only sees rows that have been mirrored. Run a sync after a
+  listing is registered (or set `SYNC_INTERVAL_MS`) before expecting the shared
+  index to show it; chain reads remain the fallback.
+- Media uploads are authorized against a fresh finalized chain read and stored under `/media`; the listing must exist on-chain.
 - The public devnet RPC rate-limits bursts (HTTP 429); reads are sequential with
   backoff and a friendly retry message.
-- Search is client-side; result sets are unbounded by the RPC, so a large
-  deployment needs the backend index.
+- The RPC fallback still loads every account and filters client-side, so a large
+  deployment depends on the backend index.

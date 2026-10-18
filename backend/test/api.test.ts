@@ -3,7 +3,7 @@ import { after, before, describe, it } from "node:test";
 
 import { PublicKey } from "@solana/web3.js";
 
-import { bytesToHex } from "../../shared/src/index.ts";
+import { bytesToHex, hexToBytes, metadataHashHex } from "../../shared/src/index.ts";
 import {
   authHeaders,
   readJson,
@@ -17,6 +17,7 @@ describe("backend HTTP API", () => {
   let app: TestApp;
   let owner: ReturnType<typeof walletFixture>;
   let listingAddress: string;
+  let listing: Awaited<ReturnType<typeof seedListing>>["listing"];
   let metadataHash: string;
   let document: unknown;
 
@@ -29,6 +30,7 @@ describe("backend HTTP API", () => {
       metadata: { name: "Box fan", description: "quiet", lat: 51.5, lng: -0.1 },
     });
     listingAddress = seeded.listing.address.toBase58();
+    listing = seeded.listing;
     metadataHash = bytesToHex(seeded.listing.metadataHash);
     document = seeded.document;
   });
@@ -97,6 +99,50 @@ describe("backend HTTP API", () => {
     });
     assert.equal(conflict.status, 409);
     assert.equal((await readJson(conflict)).error.code, "conflict");
+  });
+
+  it("authorizes writes against a fresh chain read, not a stale mirror", async () => {
+    const freshDocument = {
+      name: "Box fan",
+      description: "quiet, revised",
+      category: 1,
+      location: { label: "test", lat: 51.5, lng: -0.1 },
+      images: [],
+    };
+    const freshHash = await metadataHashHex(freshDocument);
+    app.chain.listingReads.set(listingAddress, {
+      ...listing,
+      metadataHash: hexToBytes(freshHash),
+    });
+
+    const path = `/v1/listings/${listingAddress}/metadata`;
+    const freshBody = JSON.stringify({ document: freshDocument });
+    const fresh = await fetch(`${app.url}${path}`, {
+      method: "PUT",
+      headers: {
+        ...authHeaders(owner, { method: "PUT", path, body: freshBody }),
+        "content-type": "application/json",
+      },
+      body: freshBody,
+    });
+    assert.equal(fresh.status, 200);
+    assert.equal((await readJson(fresh)).metadataHash, freshHash);
+
+    // The mirror still points at the old hash, but the chain is authoritative.
+    const staleBody = JSON.stringify({ document });
+    const stale = await fetch(`${app.url}${path}`, {
+      method: "PUT",
+      headers: {
+        ...authHeaders(owner, { method: "PUT", path, body: staleBody }),
+        "content-type": "application/json",
+      },
+      body: staleBody,
+    });
+    assert.equal(stale.status, 409);
+    assert.match((await readJson(stale)).error.message, new RegExp(freshHash));
+
+    // Restore the original chain view for the remaining cases.
+    app.chain.listingReads.set(listingAddress, listing);
   });
 
   it("rejects unsigned, replayed, and non-owner metadata writes", async () => {

@@ -2,50 +2,50 @@
   "scenario": "dispute",
   "cluster": "localnet",
   "programId": "DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ",
-  "signature": "5NGfXXUJXqr9CZZMysnVjRiuSACrB6sSstbGSyqppDMkUm95q2uo4gMmoXVTuGoKxh6wwA4uM8UBsHLeRJgW9iCG",
+  "signature": "4qZhKpLGerATJwCGHRXwGje7uHRt4zo99neY6EcEwPRkinL4KSwgKSnf52RpYo1T1xzCjJaCcWkz7PceyZhqNt85",
   "accounts": {
     "l1": {
-      "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
+      "address": "9QqdCWeb9ttSyQCWtPx5cXnipzJJ86iNstUbDse5WQBF",
       "exists": true,
       "before": {
-        "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
+        "address": "9QqdCWeb9ttSyQCWtPx5cXnipzJJ86iNstUbDse5WQBF",
         "exists": true,
         "lamports": 2157600
       },
       "after": {
-        "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
+        "address": "9QqdCWeb9ttSyQCWtPx5cXnipzJJ86iNstUbDse5WQBF",
         "exists": true,
         "lamports": 2157600
       }
     },
     "rental": {
-      "address": "243VJoaPwBxiBSwgW3gzcc8fHvvFdcWbf2aM5ejpTrcS",
+      "address": "5cdHU4RfWBY3rnNqXwg65byh9p5WVhgYR64GPYUtapfF",
       "exists": true,
       "before": {
-        "address": "243VJoaPwBxiBSwgW3gzcc8fHvvFdcWbf2aM5ejpTrcS",
+        "address": "5cdHU4RfWBY3rnNqXwg65byh9p5WVhgYR64GPYUtapfF",
         "exists": false,
         "lamports": 0
       },
       "after": {
-        "address": "243VJoaPwBxiBSwgW3gzcc8fHvvFdcWbf2aM5ejpTrcS",
+        "address": "5cdHU4RfWBY3rnNqXwg65byh9p5WVhgYR64GPYUtapfF",
         "exists": true,
         "lamports": 2199360
       }
     },
     "treasury": {
-      "address": "8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr",
+      "address": "Fu4iAPwiMSMNr3s6n4xcdq9bXaF8A4zvJwD3HVinu5mk",
       "exists": true,
       "before": {
-        "address": "8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr",
+        "address": "Fu4iAPwiMSMNr3s6n4xcdq9bXaF8A4zvJwD3HVinu5mk",
         "exists": true,
-        "lamports": 5000500000
+        "lamports": 300312500
       },
       "after": {
-        "address": "8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr",
+        "address": "Fu4iAPwiMSMNr3s6n4xcdq9bXaF8A4zvJwD3HVinu5mk",
         "exists": true,
-        "lamports": 5000500000
+        "lamports": 300312500
       }
     }
   },
-  "capturedAt": "2026-10-16T08:41:45.763Z"
+  "capturedAt": "2026-10-18T19:48:31.618Z"
 }

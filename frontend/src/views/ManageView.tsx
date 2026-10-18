@@ -9,9 +9,16 @@ import {
   ixRegisterAsset,
   ixSetListingStatus,
   ixUpdateAsset,
+  listingPda,
 } from "../solana/instructions";
 import { lamportsToSol, shortId, solToLamports } from "../solana/format";
 import { hexToBytes, hashToHex, getMetadata, saveMetadata } from "../metadata/store";
+import {
+  backendEnabled,
+  putMetadata,
+  resolveMediaUrl,
+  uploadMedia,
+} from "../api/client";
 import type { Listing } from "../solana/accounts";
 import { Card, Empty, Field, Notice } from "../components/ui";
 
@@ -97,7 +104,7 @@ function MetadataFields({
 
 function RegisterForm() {
   const { run, busy, syncMetadata } = useProgram();
-  const { publicKey } = useWallet();
+  const { publicKey, signMessage } = useWallet();
 
   const [category, setCategory] = useState(1);
   const [priceSol, setPriceSol] = useState("0.005");
@@ -108,8 +115,10 @@ function RegisterForm() {
   const [imageUrl, setImageUrl] = useState("");
   const [location, setLocation] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const submit = async () => {
+    setNotice(null);
     if (!publicKey) return;
     setLocalError(null);
 
@@ -153,10 +162,12 @@ function RegisterForm() {
     }
     syncMetadata();
 
-    await run(
+    const assetId = random32();
+    const [listingAddress] = listingPda(publicKey, assetId);
+    const signature = await run(
       [
         ixRegisterAsset(publicKey, {
-          assetId: random32(),
+          assetId,
           category,
           pricePerDay,
           deposit,
@@ -166,6 +177,22 @@ function RegisterForm() {
       ],
       "register_asset"
     );
+
+    // Publish the document to the shared index. The on-chain registration is
+    // already final here; a backend outage must not make the listing look
+    // failed, so store locally either way and report the degradation.
+    if (signature && backendEnabled && signMessage) {
+      try {
+        await putMetadata(listingAddress.toBase58(), record, { publicKey, signMessage });
+        setNotice("Listing registered and its metadata published to the shared index.");
+      } catch (cause) {
+        setLocalError(
+          `Listing is live, but the shared metadata was not stored: ${
+            cause instanceof Error ? cause.message : String(cause)
+          }. It remains available in this browser.`
+        );
+      }
+    }
   };
 
   return (
@@ -227,6 +254,11 @@ function RegisterForm() {
           {localError}
         </Notice>
       )}
+      {notice && (
+        <Notice kind="ok" title="Published">
+          {notice}
+        </Notice>
+      )}
 
       <div className="btn-row">
         <button
@@ -249,10 +281,13 @@ function ManageRow({
   listing: Listing;
   onSelect: (address: PublicKey) => void;
 }) {
-  const { run, busy, syncMetadata } = useProgram();
+  const { run, busy, syncMetadata, metadata } = useProgram();
+  const { publicKey, signMessage } = useWallet();
   const [editingTerms, setEditingTerms] = useState(false);
   const [editingMeta, setEditingMeta] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   const [priceSol, setPriceSol] = useState(lamportsToSol(listing.pricePerDay));
   const [depositSol, setDepositSol] = useState(lamportsToSol(listing.deposit));
@@ -260,7 +295,8 @@ function ManageRow({
   const [category, setCategory] = useState(listing.category);
 
   const currentHash = hashToHex(listing.metadataHash);
-  const existing = getMetadata(currentHash);
+  // Prefer this browser's copy, then the shared backend document.
+  const existing = getMetadata(currentHash) ?? metadata[currentHash];
   const [name, setName] = useState(existing?.name ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
   const [imageUrl, setImageUrl] = useState(existing?.images?.[0] ?? "");
@@ -302,7 +338,7 @@ function ManageRow({
       return;
     }
     syncMetadata();
-    await run(
+    const signature = await run(
       [
         ixUpdateAsset(listing.owner, listing.address, {
           metadataHash: hexToBytes(record.metadataHash),
@@ -310,6 +346,43 @@ function ManageRow({
       ],
       "update_asset"
     );
+
+    if (signature && backendEnabled && publicKey && signMessage) {
+      try {
+        await putMetadata(listing.address.toBase58(), record, { publicKey, signMessage });
+        setUploadNotice("On-chain hash updated and the document published to the shared index.");
+      } catch (cause) {
+        setMetaError(
+          `The on-chain hash was updated, but the shared copy failed: ${
+            cause instanceof Error ? cause.message : String(cause)
+          }. The document is still in this browser.`
+        );
+      }
+    }
+  };
+
+  const uploadPhoto = async (file: File) => {
+    setMetaError(null);
+    setUploadNotice(null);
+    if (!publicKey || !signMessage) {
+      setMetaError("Connect a wallet that supports message signing to upload media.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { asset } = await uploadMedia(listing.address.toBase58(), file, {
+        publicKey,
+        signMessage,
+      });
+      setImageUrl(resolveMediaUrl(asset.url));
+      setUploadNotice("Photo uploaded. Save & commit hash to publish it in the metadata document.");
+    } catch (cause) {
+      setMetaError(
+        `Media upload failed: ${cause instanceof Error ? cause.message : String(cause)}`
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -448,6 +521,30 @@ function ManageRow({
 
         {editingMeta && (
           <div className="form-grid" style={{ marginTop: 10 }}>
+            <Field
+              label="upload photo"
+              full
+              hint="stored by the backend, then committed by the metadata hash on save"
+            >
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                disabled={uploading || !!busy}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void uploadPhoto(file);
+                  e.target.value = "";
+                }}
+              />
+            </Field>
+            {uploading && <span className="muted small">uploading photo…</span>}
+            {uploadNotice && (
+              <div style={{ gridColumn: "1 / -1" }}>
+                <Notice kind="ok" title="Media">
+                  {uploadNotice}
+                </Notice>
+              </div>
+            )}
             <MetadataFields
               name={name}
               setName={setName}

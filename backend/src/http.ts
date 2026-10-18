@@ -27,6 +27,7 @@ import { PROGRAM_ID, RENTAL_STATUS_NAME } from "../../clients/ts/contract.ts";
 import {
   CATEGORIES,
   MAX_CATEGORY,
+  bytesToHex,
   metadataHashHex,
   parseSearchQuery,
   validateMetadata,
@@ -37,6 +38,7 @@ import {
 } from "../../shared/src/index.ts";
 import { AuditLog } from "./audit.ts";
 import { AuthError, authenticate } from "./auth.ts";
+import type { ChainReader } from "./chain.ts";
 import type { BackendConfig } from "./config.ts";
 import type { MirrorDb } from "./db.ts";
 import { MediaStore, UnsupportedMediaTypeError } from "./media.ts";
@@ -52,6 +54,8 @@ export interface AppDeps {
   audit: AuditLog;
   media: MediaStore;
   mirror: MirrorService;
+  /** Finalized reads for write authorization; the mirror can lag a fresh tx. */
+  chain: ChainReader;
 }
 
 class HttpError extends Error {
@@ -157,7 +161,7 @@ async function handle(
       const body = await readBody(request, JSON_LIMIT);
       const raw = body.toString("utf8");
       const wallet = authenticate(deps.db, { method, path: url.pathname, body: raw, headers: request.headers });
-      const listing = mustListingRow(deps, address);
+      const listing = await listingForWrite(deps, address);
       if (listing.owner !== wallet) {
         throw new HttpError(403, "unauthorized", "only the listing owner may change metadata");
       }
@@ -175,11 +179,11 @@ async function handle(
       }
 
       const hash = await metadataHashHex(validation.value);
-      if (hash !== listing.metadata_hash) {
+      if (hash !== listing.metadataHash) {
         throw new HttpError(
           409,
           "conflict",
-          `document does not match the on-chain metadata_hash (expected ${listing.metadata_hash}, got ${hash})`
+          `document does not match the on-chain metadata_hash (expected ${listing.metadataHash}, got ${hash})`
         );
       }
 
@@ -217,7 +221,7 @@ async function handle(
         body,
         headers: request.headers,
       });
-      const listing = mustListingRow(deps, address);
+      const listing = await listingForWrite(deps, address);
       if (listing.owner !== wallet) {
         throw new HttpError(403, "unauthorized", "only the listing owner may upload media");
       }
@@ -309,6 +313,31 @@ function mustListingRow(deps: AppDeps, address: string) {
 function mustListing(deps: AppDeps, address: string): ListingDTO {
   const row = mustListingRow(deps, address);
   return rowToListingDTO(row, deps.db.listMedia(address));
+}
+
+/**
+ * Resolve the authoritative owner/hash for a write.
+ *
+ * A fresh finalized chain read wins because a mirror sync may not have observed
+ * a just-confirmed `register_asset` / `update_asset` yet. If the RPC read fails
+ * (or the test double has no entry), fall back to the mirror so reads keep
+ * working; the signature and ownership checks are unchanged either way.
+ */
+async function listingForWrite(
+  deps: AppDeps,
+  address: string
+): Promise<{ owner: string; metadataHash: string }> {
+  try {
+    const fresh = await deps.chain.listing(address);
+    if (fresh) {
+      return { owner: fresh.owner.toBase58(), metadataHash: bytesToHex(fresh.metadataHash) };
+    }
+  } catch {
+    // RPC unavailable: use the last confirmed mirror row.
+  }
+
+  const row = mustListingRow(deps, address);
+  return { owner: row.owner, metadataHash: row.metadata_hash };
 }
 
 function requireAdmin(deps: AppDeps, request: IncomingMessage): void {

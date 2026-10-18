@@ -5,47 +5,47 @@
   "signature": null,
   "accounts": {
     "l2": {
-      "address": "FHA2YwDi3UFLVqNf2iEb2orgubGuDe41xaePzAJj7AsT",
+      "address": "BDeroTBaSagMv6LSPk11VjaXz6xNueCFKopHLSnMXHz9",
       "exists": true,
       "before": {
-        "address": "FHA2YwDi3UFLVqNf2iEb2orgubGuDe41xaePzAJj7AsT",
+        "address": "BDeroTBaSagMv6LSPk11VjaXz6xNueCFKopHLSnMXHz9",
         "exists": true,
         "lamports": 2157600
       },
       "after": {
-        "address": "FHA2YwDi3UFLVqNf2iEb2orgubGuDe41xaePzAJj7AsT",
+        "address": "BDeroTBaSagMv6LSPk11VjaXz6xNueCFKopHLSnMXHz9",
         "exists": true,
         "lamports": 2157600
       }
     },
     "rental": {
-      "address": "J5Q3XYDpSda1SZESNEW18LBRwEBHthZdFtemz6NXzjqF",
+      "address": "9TfWZz8FJupcG1r829QK5whNYHkV83NUpdPDyEXYAP8P",
       "exists": true,
       "before": {
-        "address": "J5Q3XYDpSda1SZESNEW18LBRwEBHthZdFtemz6NXzjqF",
+        "address": "9TfWZz8FJupcG1r829QK5whNYHkV83NUpdPDyEXYAP8P",
         "exists": false,
         "lamports": 0
       },
       "after": {
-        "address": "J5Q3XYDpSda1SZESNEW18LBRwEBHthZdFtemz6NXzjqF",
+        "address": "9TfWZz8FJupcG1r829QK5whNYHkV83NUpdPDyEXYAP8P",
         "exists": true,
         "lamports": 2199360
       }
     },
     "treasury": {
-      "address": "8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr",
+      "address": "Fu4iAPwiMSMNr3s6n4xcdq9bXaF8A4zvJwD3HVinu5mk",
       "exists": true,
       "before": {
-        "address": "8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr",
+        "address": "Fu4iAPwiMSMNr3s6n4xcdq9bXaF8A4zvJwD3HVinu5mk",
         "exists": true,
-        "lamports": 5000250000
+        "lamports": 300187500
       },
       "after": {
-        "address": "8tQDkhEo1EdheZyFEV8SZmFWyWhmar14JgSHpTjBfQWr",
+        "address": "Fu4iAPwiMSMNr3s6n4xcdq9bXaF8A4zvJwD3HVinu5mk",
         "exists": true,
-        "lamports": 5000500000
+        "lamports": 300312500
       }
     }
   },
-  "capturedAt": "2026-10-16T08:40:38.398Z"
+  "capturedAt": "2026-10-18T19:46:57.058Z"
 }

@@ -53,8 +53,10 @@ RentalAgreement  [b"rental"] + listing(32) + rental_id(32)   = 71 bytes
 
 `RentalStatus` is a one-byte enum in declaration order:
 `Reserved(0)`, `Active(1)`, `Completed(2)`, `Cancelled(3)`, `Disputed(4)`,
-`Resolved(5)`. The `LEN` constants are verified against Borsh in `state.rs` unit
-tests.
+`Resolved(5)`. No instruction writes `Active`: an open rental stays `Reserved`
+until it is terminal, and every gate accepts either open variant via
+`is_open()`. The variant remains for forward compatibility; the `LEN` constants
+are verified against Borsh in `state.rs` unit tests.
 
 ## Instructions
 
@@ -139,8 +141,13 @@ for the byte-level contract.
 ## Build and test
 
 ```bash
-anchor build
-anchor test --provider.cluster localnet
-anchor test --provider.cluster devnet
+bash scripts/anchor.sh build
+cargo test -p asset-rental
+bash scripts/anchor.sh test --provider.cluster localnet
+bash scripts/anchor.sh test --provider.cluster devnet
 ```
+
+The settlement-gate rule is a pure function (`settle_allowed`) with unit tests
+covering both gates and the grace-period boundary, so the timeout path is
+verified without waiting 24 hours or warping a validator clock.
 

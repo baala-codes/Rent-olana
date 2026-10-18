@@ -59,6 +59,8 @@ rent-exempt lamports to the renter so the same budget is reused.
   denied.
 - **Dispute:** freeze blocks settle and cancel; non-admin resolution denied; the
   admin split is exact; pointer cleared.
+- **Config:** non-admin `set_config` rejected; fee above `MAX_FEE_BPS`
+  rejected without changing the stored config.
 - **Pause:** new rentals blocked while paused; existing rentals still settle and
   refund.
 - **Close:** `close_listing` with an open rental fails; `close_rental` returns

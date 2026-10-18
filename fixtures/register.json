@@ -5,33 +5,33 @@
   "signature": null,
   "accounts": {
     "l1": {
-      "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
+      "address": "9QqdCWeb9ttSyQCWtPx5cXnipzJJ86iNstUbDse5WQBF",
       "exists": true,
       "before": {
-        "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
+        "address": "9QqdCWeb9ttSyQCWtPx5cXnipzJJ86iNstUbDse5WQBF",
         "exists": true,
         "lamports": 2157600
       },
       "after": {
-        "address": "Y2VPcnkfHzxk3vTsTcREEzrMG2T5nyJJCQZxU4C3gdz",
+        "address": "9QqdCWeb9ttSyQCWtPx5cXnipzJJ86iNstUbDse5WQBF",
         "exists": true,
         "lamports": 2157600
       }
     },
     "l2": {
-      "address": "FHA2YwDi3UFLVqNf2iEb2orgubGuDe41xaePzAJj7AsT",
+      "address": "BDeroTBaSagMv6LSPk11VjaXz6xNueCFKopHLSnMXHz9",
       "exists": true,
       "before": {
-        "address": "FHA2YwDi3UFLVqNf2iEb2orgubGuDe41xaePzAJj7AsT",
+        "address": "BDeroTBaSagMv6LSPk11VjaXz6xNueCFKopHLSnMXHz9",
         "exists": true,
         "lamports": 2157600
       },
       "after": {
-        "address": "FHA2YwDi3UFLVqNf2iEb2orgubGuDe41xaePzAJj7AsT",
+        "address": "BDeroTBaSagMv6LSPk11VjaXz6xNueCFKopHLSnMXHz9",
         "exists": true,
         "lamports": 2157600
       }
     }
   },
-  "capturedAt": "2026-10-16T08:36:08.341Z"
+  "capturedAt": "2026-10-18T19:41:22.924Z"
 }

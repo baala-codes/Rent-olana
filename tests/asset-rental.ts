@@ -133,7 +133,10 @@ const START_EXTRA = Number(process.env.START_EXTRA ?? 2);
  * lead. Retrying is safe: the failed `init` created no rental account and the
  * same `rental_id` is reused, so no second escrow can be taken.
  */
-const BOOK_LEAD_SECONDS = Number(process.env.BOOK_LEAD_SECONDS ?? 5);
+// On a finalized-commitment test run a 5s lead routinely loses the clock race
+// because the transaction can land ~15s later. Start with enough lead for the
+// booking to be valid on the first attempt; StartInPast still retries safely.
+const BOOK_LEAD_SECONDS = Number(process.env.BOOK_LEAD_SECONDS ?? 20);
 
 /**
  * Every rental created by the suite, keyed by address, with the wallet that
@@ -172,7 +175,13 @@ async function bookStartingSoon(
       });
       return { signature, startTs };
     } catch (error) {
-      if (programErrorCode(error) !== RENTAL_ERROR_CODE.StartInPast) throw error;
+      if (programErrorCode(error) !== RENTAL_ERROR_CODE.StartInPast) {
+        const failure = parseProgramError(error);
+        console.warn(
+          `  booking failed before start (code=${failure.code ?? "?"}, name=${failure.name ?? "?"}): ${failure.message}`
+        );
+        throw error;
+      }
       console.warn(`  booking start_ts lost the clock race; retrying with lead=${lead * 2}s`);
       lead = Math.max(lead * 2, 10);
     }
@@ -466,6 +475,32 @@ describe("asset-rental", () => {
       renterWallet: renter.publicKey,
       signers: [renter],
     });
+  });
+
+  it("config: non-admin rejected and the fee cap is enforced", async () => {
+    await expectError(
+      () =>
+        setConfig(program, {
+          admin: renter.publicKey, // not config.admin
+          paused: true,
+          signers: [renter],
+        }),
+      "Unauthorized"
+    );
+
+    await expectError(
+      () =>
+        setConfig(program, {
+          admin: admin.publicKey,
+          feeBps: 1_001, // MAX_FEE_BPS is 1_000
+          signers: [admin],
+        }),
+      "FeeTooHigh"
+    );
+
+    const configAccount = await program.account.platformConfig.fetch(config);
+    assert.equal(configAccount.feeBps, 250, "a rejected update changes nothing");
+    assert.equal(configAccount.paused, false);
   });
 
   it("create: escrow is price_total + deposit, watermark and pointer set", async () => {

@@ -50,6 +50,8 @@ as "confirmed".
 | `MAX_UPLOAD_BYTES` | `5242880` | Image upload cap |
 | `SYNC_ON_START` | `false` | Sync once at boot |
 | `SYNC_INTERVAL_MS` | `0` | Periodic sync (0 = off) |
+| `NOTIFY_WEBHOOK_URL` | unset | POST terminal rental transitions here (unset disables) |
+| `NOTIFY_TIMEOUT_MS` | `5000` | Webhook request deadline |
 
 ## API
 
@@ -114,15 +116,31 @@ it after a restart, an uncertain confirmation, or any RPC outage.
 `confirmed_at` on every DTO is the last time that row was checked. The portal
 should show stale rows as unknown, not as proof.
 
+## Notifications
+
+When `SYNC_ON_START` or `SYNC_INTERVAL_MS` observes a terminal rental transition
+(`rental.settled`, `rental.cancelled`, `rental.disputed`, `rental.resolved`), the
+backend also POSTs the audit event to `NOTIFY_WEBHOOK_URL`:
+
+```json
+{ "source": "asset-rental", "event": { "kind": "rental.settled", "subject": "<rental>", "wallet": "<renter>", "detail": { "listing": "<listing>", "status": "Completed", "escrow": "0" } } }
+```
+
+Delivery is best-effort and fire-and-forget: a slow or failing endpoint is
+logged and never delays `sync()` or changes mirror state. Listing/config events
+remain audit-only. The mirror is still poll-based; program events are not
+consumed separately because finalized account reads are the authoritative view.
+
 ## Tests
 
-`npm test` runs 20 tests against an in-memory SQLite database and a fake
+`npm test` runs 25 tests against an in-memory SQLite database and a fake
 `ChainReader`; no validator, devnet, or network access is needed. Coverage:
 search (text, category, availability, radius + distance order, pagination,
 rentals by party/status), mirror sync (first observation, term changes, terminal
 transitions, removals, RPC failure), reconcile (drift, missing accounts, config),
 wallet auth (signature, replay, expiry, non-owner), media (upload, serve,
-traversal rejection), and admin token gating.
+traversal rejection), notification filtering/failure tolerance, and admin token
+gating.
 
 ## Trust boundary
 

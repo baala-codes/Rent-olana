@@ -57,6 +57,21 @@ pub struct SettleRental<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// The two settlement gates, expressed as one pure rule so they can be tested
+/// without a validator clock.
+///
+/// An owner may settle from `start_ts`; anyone may settle from
+/// `end_ts + GRACE_SECONDS`. An overflowing grace deadline is never reached.
+pub fn settle_allowed(now: i64, start_ts: i64, end_ts: i64, is_owner: bool) -> bool {
+    if is_owner && now >= start_ts {
+        return true;
+    }
+    match end_ts.checked_add(GRACE_SECONDS) {
+        Some(deadline) => now >= deadline,
+        None => false,
+    }
+}
+
 pub fn settle_rental_handler(ctx: Context<SettleRental>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
 
@@ -67,9 +82,10 @@ pub fn settle_rental_handler(ctx: Context<SettleRental>) -> Result<()> {
     let owner = ctx.accounts.rental.owner;
 
     let is_owner = ctx.accounts.caller.key() == owner;
-    let owner_gate = is_owner && now >= start_ts;
-    let timeout_gate = now >= end_ts.checked_add(GRACE_SECONDS).ok_or(RentalError::TimeOverflow)?;
-    require!(owner_gate || timeout_gate, RentalError::InvalidStatus);
+    require!(
+        settle_allowed(now, start_ts, end_ts, is_owner),
+        RentalError::InvalidStatus
+    );
 
     let fee = ctx.accounts.config.fee_on(price_total)?;
     let owner_amount = price_total.checked_sub(fee).ok_or(RentalError::DepositOverflow)?;
@@ -113,4 +129,41 @@ pub fn settle_rental_handler(ctx: Context<SettleRental>) -> Result<()> {
     });
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::settle_allowed;
+    use crate::constants::GRACE_SECONDS;
+
+    #[test]
+    fn owner_gate_opens_at_start() {
+        let start = 1_800_000_000;
+        let end = start + 86_400;
+        assert!(!settle_allowed(start - 1, start, end, true));
+        assert!(settle_allowed(start, start, end, true));
+        assert!(settle_allowed(end, start, end, true));
+    }
+
+    #[test]
+    fn timeout_gate_requires_the_full_grace_period() {
+        let start = 1_800_000_000;
+        let end = start + 86_400;
+        assert!(!settle_allowed(end, start, end, false));
+        assert!(!settle_allowed(end + GRACE_SECONDS - 1, start, end, false));
+        assert!(settle_allowed(end + GRACE_SECONDS, start, end, false));
+    }
+
+    #[test]
+    fn an_owner_settling_before_start_does_not_open_the_timeout_gate() {
+        let start = 1_800_000_000;
+        let end = start + 86_400;
+        assert!(!settle_allowed(start - 1, start, end, true));
+        assert!(!settle_allowed(start - 1, start, end, false));
+    }
+
+    #[test]
+    fn an_overflowing_grace_deadline_is_never_reached() {
+        assert!(!settle_allowed(i64::MAX, 0, i64::MAX, false));
+    }
 }

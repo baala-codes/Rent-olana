@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
 
@@ -14,16 +14,59 @@ const hexOf = (bytes: Uint8Array): string =>
     .join("");
 
 export function MarketView({ onSelect }: { onSelect: (address: PublicKey) => void }) {
-  const { listings, metadata, loading, error, refresh } = useProgram();
+  const { listings, metadata, loading, error, refresh, search, source, backendAvailable } = useProgram();
   const { publicKey } = useWallet();
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [radiusKm, setRadiusKm] = useState("25");
+  const [remote, setRemote] = useState<Listing[] | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   const nowSec = Math.floor(Date.now() / 1000);
 
-  const filtered = useMemo(() => {
+  // Server-side search (text, category, radius, availability) with a short
+  // debounce. If the backend is offline, `remote` stays null and the local
+  // filter below keeps the portal usable against RPC only.
+  useEffect(() => {
+    if (!backendAvailable) {
+      setRemote(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      const latNum = Number(lat);
+      const lngNum = Number(lng);
+      const hasGeo =
+        lat.trim() !== "" &&
+        lng.trim() !== "" &&
+        Number.isFinite(latNum) &&
+        Number.isFinite(lngNum);
+      void search({
+        q: query.trim() || undefined,
+        category: category === "all" ? undefined : Number(category),
+        lat: hasGeo ? latNum : undefined,
+        lng: hasGeo ? lngNum : undefined,
+        radiusKm: hasGeo ? Number(radiusKm) || 25 : undefined,
+        availableFrom: onlyAvailable ? Math.floor(Date.now() / 1000) : undefined,
+        days: 1,
+        includeInactive: true,
+        sort: hasGeo ? "relevance" : "newest",
+        limit: 100,
+      }).then((result) => {
+        if (!cancelled) setRemote(result ? result.listings : null);
+      });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, category, onlyAvailable, lat, lng, radiusKm, search, backendAvailable]);
+
+  const localFiltered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return listings
       .filter((listing) => {
@@ -44,6 +87,31 @@ export function MarketView({ onSelect }: { onSelect: (address: PublicKey) => voi
       .sort((a, b) => Number(b.createdAt - a.createdAt));
   }, [listings, metadata, query, category, onlyAvailable, nowSec]);
 
+  // The backend returns inactive rows when asked (so owners still see them),
+  // so apply the local "available only" guard to remote results too.
+  const filtered = useMemo(() => {
+    if (!remote) return localFiltered;
+    return remote.filter((listing) => {
+      if (!onlyAvailable) return true;
+      return listing.active && listing.busyUntil <= BigInt(nowSec);
+    });
+  }, [remote, localFiltered, onlyAvailable, nowSec]);
+
+  const useMyLocation = () => {
+    setGeoError(null);
+    if (!navigator.geolocation) {
+      setGeoError("this browser does not expose geolocation");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLat(position.coords.latitude.toFixed(4));
+        setLng(position.coords.longitude.toFixed(4));
+      },
+      () => setGeoError("location permission was denied; enter coordinates manually")
+    );
+  };
+
   const usedCategories = useMemo(
     () => Array.from(new Set(listings.map((l) => l.category))).sort((a, b) => a - b),
     [listings]
@@ -53,9 +121,14 @@ export function MarketView({ onSelect }: { onSelect: (address: PublicKey) => voi
     <Card
       title={`market · ${filtered.length} listing${filtered.length === 1 ? "" : "s"}`}
       actions={
-        <button type="button" className="btn tiny" onClick={() => void refresh()} disabled={loading}>
-          {loading ? "reading…" : "refresh"}
-        </button>
+        <div className="row" style={{ gap: 8 }}>
+          <span className="badge muted" title="Where this read came from">
+            {source === "backend" ? "backend index" : "rpc"}
+          </span>
+          <button type="button" className="btn tiny" onClick={() => void refresh()} disabled={loading}>
+            {loading ? "reading…" : "refresh"}
+          </button>
+        </div>
       }
       tight
     >
@@ -88,7 +161,44 @@ export function MarketView({ onSelect }: { onSelect: (address: PublicKey) => voi
             available only
           </label>
         </div>
+        <Field label="latitude" hint="optional — radius search needs both coordinates">
+          <input value={lat} onChange={(e) => setLat(e.target.value)} inputMode="decimal" placeholder="e.g. 12.9716" />
+        </Field>
+        <Field label="longitude">
+          <input value={lng} onChange={(e) => setLng(e.target.value)} inputMode="decimal" placeholder="e.g. 77.5946" />
+        </Field>
+        <Field label="radius (km)">
+          <input
+            value={radiusKm}
+            onChange={(e) => setRadiusKm(e.target.value)}
+            inputMode="numeric"
+          />
+        </Field>
+        <div className="row" style={{ alignItems: "flex-end", paddingBottom: 6 }}>
+          <button type="button" className="btn tiny" onClick={useMyLocation}>
+            use my location
+          </button>
+          {(lat || lng) && (
+            <button
+              type="button"
+              className="btn ghost tiny"
+              onClick={() => {
+                setLat("");
+                setLng("");
+              }}
+            >
+              clear
+            </button>
+          )}
+        </div>
       </div>
+      {geoError && (
+        <div style={{ padding: "0 12px 10px" }}>
+          <Notice kind="error" title="Location search">
+            {geoError}
+          </Notice>
+        </div>
+      )}
 
       {error && (
         <div style={{ padding: 12 }}>

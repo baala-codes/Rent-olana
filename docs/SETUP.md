@@ -264,7 +264,28 @@ and the wallet-signature scheme used for owner-only metadata/media writes.
 Do **not** expose the backend without a reverse proxy and TLS: wallet signatures
 protect writes, but reads and media are public by design.
 
-## 10. Troubleshooting
+## 10. Docker (optional local packaging)
+
+Build from the repository root; both images need the shared client and shared
+package:
+
+```bash
+docker compose up --build
+# portal:  http://localhost:8080
+# backend: http://localhost:8787
+docker compose exec backend sh -c 'curl -s localhost:8787/health'
+```
+
+The backend starts with `SYNC_ON_START=1` and `SYNC_INTERVAL_MS=60000` in
+`docker-compose.yml`, so the index fills from devnet automatically. Set
+`ADMIN_TOKEN`, `NOTIFY_WEBHOOK_URL`, or `RPC_URL` in the environment to override
+the local defaults. The mirror and media live in the `mirror-data` volume.
+
+CI is in `.github/workflows/ci.yml`: one job runs `npm run verify` plus the
+portal build; a second runs `cargo test`, `anchor build`, and the localnet
+acceptance suite on a toolchain host.
+
+## 11. Troubleshooting
 
 | Symptom | Cause and fix |
 | --- | --- |

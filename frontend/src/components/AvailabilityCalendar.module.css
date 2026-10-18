@@ -1,0 +1,105 @@
+.calendar {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.title {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-left: 6px;
+}
+
+.freeDot {
+  background: rgba(20, 241, 149, 0.35);
+  border: 1px solid rgba(20, 241, 149, 0.7);
+}
+
+.busyDot {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 2px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.day:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.free:hover {
+  border-color: rgba(20, 241, 149, 0.65);
+  background: rgba(20, 241, 149, 0.08);
+}
+
+.busy {
+  text-decoration: line-through;
+  color: var(--faint);
+}
+
+.selected {
+  border-color: var(--green);
+  background: rgba(20, 241, 149, 0.14);
+  color: var(--ink);
+}
+
+.dayNumber {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dayLabel {
+  font-size: 8.5px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}

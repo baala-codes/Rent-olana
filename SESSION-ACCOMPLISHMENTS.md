@@ -1,6 +1,8 @@
 # Rent-olana session accomplishments
 
 Snapshot timestamp: 1792353104
+- Verification artifacts: `SESSION-ACCOMPLISHMENTS.md` and `/tmp/localhost-verification-report.json`
+- Archive: `/tmp/rent-olana-session-9MUu.tar.gz` (176 entries)
 
 ## Archive
 Local copy: `/tmp/rent-olana-session-9MUu.tar.gz`
@@ -27,15 +29,20 @@ From `/tmp/acceptance-full.log` (last completed lines):
 - `replay`: a reused rental_id fails account creation with no double charge
 - `rejection matrix`: each case leaves state and balances unchanged
 
-## Localhost status
-- Backend process was started for localhost testing.
-- One backend health probe returned non-200 during startup; the service was still being brought up when the session paused.
-- If you want this re-verified, re-run backend startup and check `http://127.0.0.1:<backend port>`.
+## Localhost attempt
+- Validator, backend, and frontend were each started multiple times during this session.
+- Backend and frontend could start briefly in foreground trials.
+- Final verification probe showed none of the three services were reachable in the last check.
+- Solana test-validator binary exists, but it did not expose RPC for the final verification window.
 
-## Open items / not finished
-- Final “localhost it” verification was interrupted by run timeouts.
-- Do not assume the portal or backend were live at the end of the session.
-- If you want a clean local run, restart the validator, backend, and frontend together, then run `tests/asset-rental.ts` again.
+Full probe result saved to `/tmp/localhost-verification-report.json`.
+
+## Final verification outcome
+- Validator: not running / RPC failed
+- Backend: not running / health check failed / categories failed
+- Frontend: not running / root probe failed
+
+Localhost bring-up was not fully completed in a verified state.
 
 ## Files saved from working tree
 See the snapshot archive above for the full tree. The most important changed paths are under:

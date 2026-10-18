@@ -1,0 +1,29 @@
+/* ---------------------------------------------------------------- tables */
+
+.kv {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.kv td {
+  padding: 7px 0;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.kv td:first-child {
+  color: var(--muted);
+  width: 44%;
+  padding-right: 12px;
+}
+
+.kv td .mono {
+  word-break: break-all;
+}
+
+.kv tr:last-child td {
+  border-bottom: none;
+}
+

@@ -28,7 +28,6 @@ together.
 | `on-chain-entities.*` | On-chain accounts (`PlatformConfig` → `AssetListing` → `RentalAgreement`) with their fields |
 | `off-chain-components.*` | Backend services: search index, media storage, rental mirror, reconciler |
 | `off-chain-entities.*` | Backend mirror entities (listing, rental, media) and the local audit log |
-| `ssh-components.*`, `ssh-login.*` | The separate wallet-authenticated SSH workstream in [`../../ssh/`](../../ssh/) |
 
 See [`../CONTRACT.md`](../CONTRACT.md) for the account layouts and PDA seeds, and
 [`../../new_architecture.md`](../../new_architecture.md) for the system design.

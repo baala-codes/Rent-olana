@@ -1,32 +1,133 @@
 # Backend
 
-The provider backend for the asset-rental marketplace. It is a Node/TypeScript
-service that makes listings discoverable and rentals usable, and it **never
-decides fund movement** — the Solana program owns the funds and rental state.
+The provider backend for the asset-rental marketplace: a Node/TypeScript service
+that makes listings discoverable and rentals usable. It **never decides fund
+movement** — the Solana program owns the funds and the rental state. It reads
+finalized chain accounts, mirrors them, and serves the off-chain half (search,
+metadata, media, order history, audit).
 
-Build one provider service for the POC.
+- **Runtime:** Node 22.18+ (runs the TypeScript sources directly through `tsx`).
+- **Storage:** SQLite via the built-in `node:sqlite` module — no native build.
+  The mirror is disposable and can be rebuilt from chain state at any time.
+- **Chain client:** `clients/ts/wire.ts` — the same codec, discriminators and
+  account decoders the portal uses.
+- **HTTP:** Node's built-in server, no framework.
 
-- Maintain a geo/category search index over listings so renters can discover
-  assets off-chain.
-- Store asset images and large off-chain metadata (descriptions, location
-  details); the on-chain `metadata_hash` commits to them.
-- Mirror listings and rental agreements for UX: availability/calendar display,
-  rental status, order history.
-- Reconcile the mirror against **finalized** chain reads after restarts or
-  uncertain confirmations; treat unavailable or stale RPC state as "unknown",
-  never as confirmation.
-- Relay notification hooks (booking, settlement, cancellation, dispute).
+## Run it
 
-The mirror is disposable: it is served from SQLite or Postgres, seeded from
-events and finalized account reads. Reserve and coordinate any provider-side
-identities the same way the program expects (stable 32-byte `asset_id`,
-`rental_id` generated and persisted before submission).
+```bash
+cd backend
+npm install
+npm start          # http://127.0.0.1:8787
+npm test           # 20 tests, no validator or network required
+npm run typecheck
+```
 
-Start by agreeing on API payloads, database states, retries, and reconciliation
-results in [shared/](../shared/), and read the on-chain contract in
-[docs/CONTRACT.md](../docs/CONTRACT.md). The program is the source of truth;
-this service only reads and mirrors. Add setup and run commands with the
-implementation.
+On first start the mirror is empty. Populate it from finalized devnet state:
 
-See [`new_architecture.md`](../new_architecture.md) §3 (components)
-and §10 (local state and audit records).
+```bash
+export ADMIN_TOKEN=dev-only-token
+npm start
+curl -X POST -H "x-admin-token: dev-only-token" http://127.0.0.1:8787/v1/admin/sync
+```
+
+Or set `SYNC_ON_START=1` (and optionally `SYNC_INTERVAL_MS=60000`). A failed RPC
+read returns 503 and leaves the mirror untouched — "unknown" is never recorded
+as "confirmed".
+
+## Configuration
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `HOST` / `PORT` | `127.0.0.1` / `8787` | Bind address |
+| `CLUSTER` | `devnet` | Label used for the RPC default and `/health` |
+| `RPC_URL` | `https://api.devnet.solana.com` | Finalized chain reads |
+| `DB_PATH` | `var/mirror.sqlite` | SQLite mirror |
+| `MEDIA_DIR` | `var/media` | Content-addressed image files |
+| `AUDIT_PATH` | `var/audit.jsonl` | Append-only audit log |
+| `ADMIN_TOKEN` | unset | Enables `/v1/admin/*`; unset disables them |
+| `CORS_ORIGINS` | `http://127.0.0.1:5173,http://localhost:5173` | Portal origins |
+| `MAX_UPLOAD_BYTES` | `5242880` | Image upload cap |
+| `SYNC_ON_START` | `false` | Sync once at boot |
+| `SYNC_INTERVAL_MS` | `0` | Periodic sync (0 = off) |
+
+## API
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/health` | Mirror counts and last sync time |
+| `GET` | `/v1/categories` | Category codes (from the on-chain contract) |
+| `GET` | `/v1/config` | Mirrored `PlatformConfig`, or `null` |
+| `GET` | `/v1/listings` | Search: `q`, `category`, `lat`+`lng`+`radiusKm`, `availableFrom`, `days`, `sort`, `limit`, `offset`, `includeInactive` |
+| `GET` | `/v1/listings/:address` | One listing with metadata and media |
+| `PUT` | `/v1/listings/:address/metadata` | Owner-signed; document must hash to the on-chain `metadata_hash` |
+| `POST` | `/v1/listings/:address/media` | Owner-signed raw image (`image/jpeg|png|webp|gif|avif`) |
+| `GET` | `/v1/rentals` | Filters: `owner`, `renter`, `status`, `listing` |
+| `GET` | `/v1/rentals/:address` | One mirrored rental |
+| `POST` | `/v1/admin/sync` | Full snapshot upsert (`x-admin-token`) |
+| `POST` | `/v1/admin/reconcile` | Re-read every mirrored account, correct drift |
+| `GET` | `/v1/admin/audit` | Recent JSONL events |
+| `GET` | `/media/:filename` | Immutable content-addressed file |
+
+Amounts are decimal-string lamports; timestamps are Unix seconds. See
+[`shared/src/api.ts`](../shared/src/api.ts) for the exact DTOs.
+
+### Wallet-signed writes
+
+Metadata and media writes must prove ownership of the listing. The request
+carries `x-wallet`, `x-issued-at`, `x-nonce`, and `x-signature`; the signature is
+Ed25519 over:
+
+```text
+asset-rental:v1
+<METHOD>
+<path>
+<sha256 hex of the raw body bytes>
+<issued-at>
+<nonce>
+```
+
+Timestamps are accepted within ±5 minutes and each nonce is single-use, so a
+captured request cannot be replayed. The signer must equal the listing's on-chain
+owner. See [`src/auth.ts`](src/auth.ts); `backend/test/helpers.ts` has a signing
+example.
+
+### Why the metadata hash is checked
+
+`PUT .../metadata` rejects a document whose canonical SHA-256 differs from the
+listing's on-chain `metadata_hash` (409). That is the point of committing the hash
+on chain: the backend must not serve a document the chain does not point at. The
+canonical encoding lives in [`shared/src/metadata.ts`](../shared/src/metadata.ts)
+and is shared with the portal.
+
+## Mirror and reconciliation
+
+`sync()` fetches the config, every `AssetListing`, and every `RentalAgreement`,
+upserts them, removes rows whose accounts no longer exist, and writes an audit
+event for each observed transition (`listing.registered`, `listing.updated`,
+`rental.created`, `rental.settled`, …).
+
+`reconcile()` re-reads each mirrored account individually from a finalized node,
+updates or removes drift, and reports counts plus the mismatched addresses. Run
+it after a restart, an uncertain confirmation, or any RPC outage.
+
+`confirmed_at` on every DTO is the last time that row was checked. The portal
+should show stale rows as unknown, not as proof.
+
+## Tests
+
+`npm test` runs 20 tests against an in-memory SQLite database and a fake
+`ChainReader`; no validator, devnet, or network access is needed. Coverage:
+search (text, category, availability, radius + distance order, pagination,
+rentals by party/status), mirror sync (first observation, term changes, terminal
+transitions, removals, RPC failure), reconcile (drift, missing accounts, config),
+wallet auth (signature, replay, expiry, non-owner), media (upload, serve,
+traversal rejection), and admin token gating.
+
+## Trust boundary
+
+- All amounts and statuses come from decoded program accounts; nothing here is
+  authoritative.
+- Writes only touch off-chain rows; the service holds no keys and signs nothing.
+- The audit log contains addresses, timestamps, and amounts — never keys, PII,
+  coordinates beyond a coarse location label, or document bodies.

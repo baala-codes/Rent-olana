@@ -4,20 +4,32 @@ Cross-component and end-to-end tests for the asset-rental marketplace. Keep
 component-level tests beside each implementation (Rust unit tests in
 `programs/asset-rental/src/`); the acceptance suite lives here.
 
-The suite is `tests/asset-rental.ts`, run by Anchor:
+Two suites live here:
+
+- `tests/asset-rental.ts` — the Anchor acceptance suite (validator required).
+- `tests/contract.test.ts` — encoding, decoder, and error-parsing tests that run
+  without a validator (`npm run test:client`).
 
 ```bash
 anchor test --provider.cluster localnet   # isolated, throwaway validator
 anchor test --provider.cluster devnet     # against the funded deployment
+npm run test:client                       # no validator, no network
 ```
+
+Use Node 22 LTS for the Anchor suite: `ts-mocha` does not run on Node 26. The
+validator-free suite uses `tsx` and works on both.
 
 ## Harness
 
 - `fund()` — airdrop-free funding from the deploy wallet.
 - `scenario()` — wraps a case and dumps a pre/post fixture into
   [`../fixtures/`](../fixtures/) (see that folder's README).
-- `expectError(code)` — matches an Anchor error; `expectFailure()` for generic
-  failures.
+- `expectError(code)` — decodes the program error through
+  `parseProgramError` (never `error.message`, which Anchor/web3.js can mask as
+  `Unknown action 'undefined'`) and fails with the program logs attached;
+  `expectFailure()` for generic failures.
+- `bookStartingSoon()` — books a near-future start and retries only on
+  `StartInPast`, reusing the same `rental_id`; there is no fixed start margin.
 
 Before hook: initialize config (fee 250 bps) and register two listings
 (`L1`: price 10_000_000/day, deposit 50_000_000, max_days 30; `L2`: price

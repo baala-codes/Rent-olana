@@ -48,17 +48,27 @@ faucet link when low), and the wallet button.
 
 ## How it talks to the program
 
-There is **no generated IDL** (the workspace has not run `anchor build`), so the
-portal hand-encodes everything against the frozen contract:
+The portal does **not** carry its own encoding. It imports the published client
+contract from [`clients/ts/`](../clients/ts/) through the `@rental-client` alias:
 
-- `src/solana/constants.ts` — program ID, seeds, account/instruction
-  discriminators, error table. Verified against [`docs/CONTRACT.md`](../docs/CONTRACT.md).
-- `src/solana/codec.ts` — a small Borsh writer/reader (LE integers, the `Option`
-  tag, raw 32-byte values).
-- `src/solana/instructions.ts` — one builder per instruction; account order and
-  writability flags match [`docs/EXAMPLES.md`](../docs/EXAMPLES.md).
-- `src/solana/accounts.ts` — fetches and decodes accounts using the byte-offset
-  tables in `CONTRACT.md`.
+- `clients/ts/contract.ts` — program ID, seeds, statuses, errors, categories.
+  Every instruction/account discriminator comes from
+  `clients/ts/generated.ts`, which is generated from the published IDL by
+  `scripts/gen-client-constants.mjs`. Nothing is hand-copied.
+- `clients/ts/wire.ts` — the single Borsh writer/reader, PDA derivation,
+  instruction builders, and account decoders. The backend and the acceptance
+  tests use the same module, so all three are byte-identical by construction.
+- `src/solana/{constants,accounts,instructions}.ts` — thin re-exports for the
+  views; the only portal-specific code left in `src/solana/` is formatting and
+  transaction sending.
+
+The off-chain metadata commitment is shared too: `src/metadata/store.ts`
+persists documents but delegates canonicalisation and SHA-256 to
+[`shared/src/metadata.ts`](../shared/src/metadata.ts), which the backend uses to
+verify that a stored document matches the on-chain `metadata_hash`.
+
+`scripts/check-contract.mjs` (run by `npm run contract:check`) fails if the IDL,
+the program ID, and the client builders drift apart.
 
 Two Vite shims are required by `@solana/web3.js` and live in
 [`vite.config.ts`](vite.config.ts): `global → globalThis` and `buffer → the npm
@@ -102,7 +112,8 @@ src/
   solana/                 constants, pda, codec, accounts, instructions, format, tx
   components/             TopBar, WalletBalance, Footer, ActionBar, ProgramStatus, ui primitives
   views/                  Market, ListingDetail, Manage, Rentals, Admin
-  styles.css              the Solana theme
+  styles.css              ordered @import manifest for the theme
+  styles/                 base tokens, then one file per UI area
 ```
 
 ## Verified
@@ -116,13 +127,14 @@ src/
 
 ## Limitations
 
-- **The program is not deployed** (no IDL, no `.keys/`, nothing on devnet), so
-  live reads return zero accounts and every list shows an empty state. The portal
-  is wired for a deployed program and will populate the moment one exists.
-- Metadata is per-browser (`localStorage`), so a listing's name/photo is only
-  visible to whoever created it on that machine. A shared index (object storage
-  + a provider backend) is the documented next step for cross-user discovery.
+- **The program is not deployed yet**, so live reads return zero accounts and
+  every list shows an empty state. The portal is wired for a deployed program and
+  will populate the moment one exists.
+- Discovery still reads `getProgramAccounts` directly. The backend in
+  [`../backend/`](../backend/) provides the geo/category index and shared
+  metadata/media, but this portal does not call it yet; metadata falls back to
+  per-browser `localStorage`.
 - The public devnet RPC rate-limits bursts (HTTP 429); reads are sequential with
   backoff and a friendly retry message.
-- Search is client-side over `getProgramAccounts`; the geo/category index the
-  architecture describes is not built here.
+- Search is client-side; result sets are unbounded by the RPC, so a large
+  deployment needs the backend index.

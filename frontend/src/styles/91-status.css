@@ -1,0 +1,83 @@
+/* ------------------------------------------------------------- status bar */
+
+.status-bar {
+  display: block;
+}
+
+.status-bar > span {
+  white-space: nowrap;
+  margin-right: 12px;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.7s linear infinite;
+  vertical-align: -1px;
+  margin-right: 6px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pulse {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 0 rgba(20, 241, 149, 0.7);
+  animation: pulse 2s infinite;
+  vertical-align: 1px;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(20, 241, 149, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(20, 241, 149, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(20, 241, 149, 0);
+  }
+}
+
+.hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 14px 0;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.owner-flag {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--purple);
+  border: 1px solid rgba(153, 69, 255, 0.5);
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-left: 8px;
+  letter-spacing: 0.04em;
+}
+

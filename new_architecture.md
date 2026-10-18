@@ -438,7 +438,7 @@ Solo build; three streams.
 
 | Stream | Deliverables |
 |--------|--------------|
-| 1. On-chain program | `PlatformConfig`, `AssetListing`, `RentalAgreement`; 11 instructions; events; client helpers; deployment; program tests; fixtures. |
+| 1. On-chain program | `PlatformConfig`, `AssetListing`, `RentalAgreement`; 12 instructions; events; client helpers; deployment; program tests; fixtures. |
 | 2. Portal + backend | Wallet portal, listing CRUD, geo/category search index, media storage, rental/order mirror, reconciliation, Docker packaging. |
 | 3. Infra/docs | Toolchain, key setup, deploy runbook, architecture/contract docs, acceptance runner. |
 
@@ -460,8 +460,8 @@ book, pay, and get the deposit back on settlement, and every §12 scenario passe
 - NFT provenance per asset; listing ownership transfer.
 - Future/scheduled bookings per listing (interval storage, multi-occupancy).
 - Hourly granularity and dynamic pricing.
-- Wallet-signed delivery/return proofs (challenge-verification pattern from the
-  archived SSH workstream).
+- Wallet-signed delivery/return proofs (challenge–response attestations signed by
+  the owner and renter wallets).
 - SPL-token billing including USDC.
 - Programmatic deposit forfeiture rules and bonded arbitrator panels.
 - Multisig admin; insurance and dispute-evidence integrations.

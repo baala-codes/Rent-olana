@@ -1,0 +1,36 @@
+/* ---------------------------------------------------------------- notices */
+
+.notice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--purple);
+  background: linear-gradient(90deg, rgba(153, 69, 255, 0.12), rgba(153, 69, 255, 0.03));
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+  color: var(--ink-soft);
+}
+
+.notice.error {
+  border-left-color: var(--red);
+  background: linear-gradient(90deg, rgba(255, 92, 124, 0.14), rgba(255, 92, 124, 0.03));
+}
+
+.notice.ok {
+  border-left-color: var(--green);
+  background: linear-gradient(90deg, rgba(20, 241, 149, 0.14), rgba(20, 241, 149, 0.03));
+}
+
+.notice > div > strong {
+  display: block;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.notice .mono {
+  word-break: break-all;
+  color: var(--ink-soft);
+}
+

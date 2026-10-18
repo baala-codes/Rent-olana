@@ -4,6 +4,7 @@ import { Keypair, PublicKey, SystemProgram, type TransactionSignature } from "@s
 import { randomBytes } from "crypto";
 
 import { configPda, listingPda, rentalPda, toBytes32, type Bytes32 } from "./pda";
+import { toProgramError } from "./wire";
 
 /**
  * Instruction builders for the asset-rental program.
@@ -27,6 +28,46 @@ export type RentalProgram = Program;
 /** Program method table, untyped so this file compiles without generated types. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const methods = (program: RentalProgram): any => program.methods as any;
+
+/**
+ * Send a builder and rethrow failures with the program's own code, message and
+ * logs.
+ *
+ * Anchor 0.30 constructs `new SendTransactionError(message, logs)`, but
+ * web3.js >= 1.95 expects `{ action, signature, transactionMessage, logs }`.
+ * The destructured `action` is therefore `undefined` and both the logs and the
+ * signature are discarded, leaving only `Unknown action 'undefined'`.
+ *
+ * When that happens we re-simulate the same builder. Simulation needs neither a
+ * signature nor a blockhash (`replaceRecentBlockhash`), so it reproduces the
+ * program logs without moving any funds or requiring a second approval.
+ */
+async function send(program: RentalProgram, builder: any): Promise<TransactionSignature> {
+  try {
+    return (await builder.rpc()) as TransactionSignature;
+  } catch (cause) {
+    const recovered = await recoverSimulationLogs(program, builder);
+    throw toProgramError(recovered ?? cause);
+  }
+}
+
+async function recoverSimulationLogs(
+  program: RentalProgram,
+  builder: any
+): Promise<{ message: string; logs: string[] } | null> {
+  try {
+    const transaction = await builder.transaction();
+    const simulation = await program.provider.connection.simulateTransaction(transaction, {
+      replaceRecentBlockhash: true,
+      sigVerify: false,
+    });
+    const logs = simulation.value.logs ?? [];
+    return logs.length > 0 ? { message: simulation.value.err?.toString() ?? "simulation failed", logs } : null;
+  } catch {
+    // Simulation is best-effort diagnostics; fall back to the original error.
+    return null;
+  }
+}
 
 /** Attach any extra signers (owner/renter keypairs) to a builder. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -79,7 +120,7 @@ export async function initializeConfig(program: RentalProgram, args: InitializeC
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature, config };
+  return { signature: await send(program, builder), config };
 }
 
 export interface SetConfigArgs {
@@ -101,7 +142,7 @@ export async function setConfig(program: RentalProgram, args: SetConfigArgs) {
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature, config };
+  return { signature: await send(program, builder), config };
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +184,7 @@ export async function registerAsset(program: RentalProgram, args: RegisterAssetA
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature, listing, assetId };
+  return { signature: await send(program, builder), listing, assetId };
 }
 
 export interface UpdateAssetArgs {
@@ -175,7 +216,7 @@ export async function updateAsset(program: RentalProgram, args: UpdateAssetArgs)
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature };
+  return { signature: await send(program, builder) };
 }
 
 export interface SetListingStatusArgs {
@@ -194,7 +235,7 @@ export async function setListingStatus(program: RentalProgram, args: SetListingS
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature };
+  return { signature: await send(program, builder) };
 }
 
 export interface CloseListingArgs {
@@ -212,7 +253,7 @@ export async function closeListing(program: RentalProgram, args: CloseListingArg
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature };
+  return { signature: await send(program, builder) };
 }
 
 // ---------------------------------------------------------------------------
@@ -249,7 +290,7 @@ export async function createRental(program: RentalProgram, args: CreateRentalArg
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature, rental, rentalId };
+  return { signature: await send(program, builder), rental, rentalId };
 }
 
 export interface SettleRentalArgs {
@@ -283,7 +324,7 @@ export async function settleRental(program: RentalProgram, args: SettleRentalArg
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature };
+  return { signature: await send(program, builder) };
 }
 
 export interface CancelRentalArgs {
@@ -310,7 +351,7 @@ export async function cancelRental(program: RentalProgram, args: CancelRentalArg
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature };
+  return { signature: await send(program, builder) };
 }
 
 export interface RaiseDisputeArgs {
@@ -330,7 +371,7 @@ export async function raiseDispute(program: RentalProgram, args: RaiseDisputeArg
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature };
+  return { signature: await send(program, builder) };
 }
 
 export interface ResolveDisputeArgs {
@@ -363,7 +404,7 @@ export async function resolveDispute(program: RentalProgram, args: ResolveDisput
     args.signers
   );
 
-  return { signature: (await builder.rpc()) as TransactionSignature };
+  return { signature: await send(program, builder) };
 }
 
 export interface CloseRentalArgs {
@@ -377,5 +418,5 @@ export async function closeRental(program: RentalProgram, args: CloseRentalArgs)
     .closeRental()
     .accounts({ rental: args.rental, renterWallet: args.renterWallet });
 
-  return { signature: (await builder.rpc()) as TransactionSignature };
+  return { signature: await send(program, builder) };
 }

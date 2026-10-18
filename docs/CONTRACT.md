@@ -20,11 +20,12 @@ backend. Solana remains the source of truth for funds and rental state.
 | Source | [`programs/asset-rental/`](../programs/asset-rental/) |
 | Design | [`../new_architecture.md`](../new_architecture.md) |
 
-The program ID must stay identical in three places: `declare_id!` in
-`programs/asset-rental/src/lib.rs`, `[programs.devnet]` in `Anchor.toml`, and
-`PROGRAM_ID` in `clients/ts/constants.ts`. Run `anchor keys sync` to update the
-Rust and `Anchor.toml` copies, then edit `constants.ts` to match;
-`scripts/export-clients.sh` fails if the three disagree.
+The program ID must stay identical in `declare_id!`
+(`programs/asset-rental/src/lib.rs`), both `[programs.*]` tables in `Anchor.toml`,
+and `"address"` in the published IDL. The TypeScript constants are generated
+from the IDL (`clients/ts/generated.ts`), so they cannot drift. Run
+`anchor keys sync` and then `bash scripts/export-clients.sh`;
+`npm run contract:check` fails if any copy disagrees.
 
 ## 1. Accounts
 
@@ -96,8 +97,8 @@ Discriminator `54cecc92f0da130e`.
 | 179 | 8 | `created_at` | `i64` LE | Chain time at creation. |
 | 187 | 1 | `bump` | `u8` | PDA bump. |
 
-`RentalStatus` is a one-byte enum in declaration order (mirrored in
-`clients/ts/constants.ts` as `RENTAL_STATUS`):
+`RentalStatus` is a one-byte enum in declaration order (exported from
+`clients/ts/contract.ts` as `RENTAL_STATUS`):
 
 ```text
 Reserved = 0   booked, not yet started
@@ -305,8 +306,9 @@ append only, never reorder.
 | 6021 | `InvalidTreasury` | The treasury address is not acceptable. |
 | 6022 | `InvalidShare` | The owner share must be at most 10_000 basis points. |
 
-Codes are mirrored in [`clients/ts/constants.ts`](../clients/ts/constants.ts)
-(`RENTAL_ERRORS`, `RENTAL_ERROR_CODE`).
+Codes are exported from [`clients/ts/contract.ts`](../clients/ts/contract.ts)
+(`RENTAL_ERRORS`, `RENTAL_ERROR_CODE`) and decoded from logs by
+`parseProgramError` in [`clients/ts/wire.ts`](../clients/ts/wire.ts).
 
 ## 7. Program-enforced constants
 

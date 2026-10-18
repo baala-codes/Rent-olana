@@ -131,15 +131,26 @@ function RegisterForm() {
       return;
     }
 
+    if (!name.trim()) {
+      setLocalError("name is required");
+      return;
+    }
+
     // Commit to the off-chain document: the on-chain metadata_hash is the
     // SHA-256 of exactly this record, so the chain provably points at it.
-    const record = await saveMetadata({
-      name,
-      description,
-      category,
-      location: location.trim() ? { label: location.trim() } : null,
-      images: imageUrl.trim() ? [imageUrl.trim()] : [],
-    });
+    let record;
+    try {
+      record = await saveMetadata({
+        name,
+        description,
+        category,
+        location: location.trim() ? { label: location.trim() } : null,
+        images: imageUrl.trim() ? [imageUrl.trim()] : [],
+      });
+    } catch (cause) {
+      setLocalError(cause instanceof Error ? cause.message : String(cause));
+      return;
+    }
     syncMetadata();
 
     await run(
@@ -241,6 +252,7 @@ function ManageRow({
   const { run, busy, syncMetadata } = useProgram();
   const [editingTerms, setEditingTerms] = useState(false);
   const [editingMeta, setEditingMeta] = useState(false);
+  const [metaError, setMetaError] = useState<string | null>(null);
 
   const [priceSol, setPriceSol] = useState(lamportsToSol(listing.pricePerDay));
   const [depositSol, setDepositSol] = useState(lamportsToSol(listing.deposit));
@@ -271,14 +283,24 @@ function ManageRow({
   };
 
   const saveMeta = async () => {
-    if (!name.trim()) return;
-    const record = await saveMetadata({
-      name,
-      description,
-      category,
-      location: location.trim() ? { label: location.trim() } : null,
-      images: imageUrl.trim() ? [imageUrl.trim()] : [],
-    });
+    setMetaError(null);
+    if (!name.trim()) {
+      setMetaError("name is required");
+      return;
+    }
+    let record;
+    try {
+      record = await saveMetadata({
+        name,
+        description,
+        category,
+        location: location.trim() ? { label: location.trim() } : null,
+        images: imageUrl.trim() ? [imageUrl.trim()] : [],
+      });
+    } catch (cause) {
+      setMetaError(cause instanceof Error ? cause.message : String(cause));
+      return;
+    }
     syncMetadata();
     await run(
       [
@@ -316,6 +338,12 @@ function ManageRow({
           {rented && <span className="badge open">rented</span>}
           {!existing && <span className="badge muted">no off-chain doc</span>}
         </div>
+
+        {metaError && (
+          <Notice kind="error" title="Metadata not saved">
+            {metaError}
+          </Notice>
+        )}
 
         <div className="item-actions">
           <button

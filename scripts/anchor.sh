@@ -20,6 +20,17 @@
 
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+# A fresh clone has no `.keys/` (it is gitignored), yet `Anchor.toml` names
+# `.keys/admin.json` as the provider wallet and the suite loads five role keys.
+# Create them before any command that needs a signing wallet. `keys` commands
+# are left alone so key management stays explicit.
+if [ "${1:-}" != "keys" ] && [ ! -f .keys/admin.json ]; then
+  bash "$ROOT/scripts/bootstrap-keys.sh" --quiet
+fi
+
 export RUSTUP_TOOLCHAIN="${RUSTUP_TOOLCHAIN:-nightly-2025-01-15}"
 
 exec anchor "$@"

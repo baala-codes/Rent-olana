@@ -1,0 +1,172 @@
+/* ---------------------------------------------------------------- top bar */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(10, 10, 15, 0.86);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar::after {
+  content: "";
+  display: block;
+  height: 2px;
+  background: var(--gradient);
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  max-width: 1520px;
+  margin: 0 auto;
+  min-height: 44px;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.brand-logo {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.brand-logo .y {
+  /* Keep the black-on-gradient pill for the wordmark's first half. */
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 10px;
+}
+
+.nav-link {
+  font-size: 12.5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.nav-link.active {
+  background: var(--gradient-soft);
+  border-color: rgba(153, 69, 255, 0.45);
+  color: #fff;
+}
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cluster-pill {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: rgba(20, 241, 149, 0.1);
+  color: var(--green);
+  border: 1px solid rgba(20, 241, 149, 0.28);
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.cluster-pill .dot {
+  color: var(--green);
+}
+
+.balance-chip {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.balance-chip.low {
+  color: var(--amber);
+  border-color: rgba(255, 176, 32, 0.35);
+  background: rgba(255, 176, 32, 0.08);
+}
+
+.balance-chip a {
+  color: var(--purple);
+}
+
+/* Compact, on-theme wallet button (overrides wallet-adapter defaults). */
+.wallet-adapter-button.wallet-adapter-button-trigger {
+  background: var(--gradient);
+  color: #0b0b10;
+  height: 30px;
+  padding: 0 14px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  line-height: 30px;
+}
+
+.wallet-adapter-button.wallet-adapter-button-trigger:hover {
+  filter: brightness(1.08);
+}
+
+.wallet-adapter-button .wallet-adapter-button-start-icon,
+.wallet-adapter-button .wallet-adapter-button-end-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+}
+
+/* Dark-friendly wallet modal. */
+.wallet-adapter-modal-wrapper {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.wallet-adapter-modal-title {
+  color: var(--ink);
+}
+
+.wallet-adapter-modal-list .wallet-adapter-button {
+  background: var(--surface-3);
+}
+

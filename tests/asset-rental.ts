@@ -35,6 +35,8 @@ import {
   closeRental,
   initializeConfig,
   setConfig,
+  programErrorCode,
+  parseProgramError,
 } from "../clients/ts";
 
 // ---------------------------------------------------------------------------
@@ -121,15 +123,45 @@ const chainNow = async (): Promise<number> => {
 const START_EXTRA = Number(process.env.START_EXTRA ?? 2);
 
 /**
- * Headroom for a rental that is meant to start "immediately". `create_rental`
- * requires `start_ts >= Clock::get()`, and the transaction is built/sent after
- * that timestamp is chosen, so `start_ts` must leave enough room for the
- * transaction to land while the chain clock is still before it. A 2-second
- * margin raced the clock and made these bookings revert with `StartInPast`
- * before any assertion ran. `waitForStart` waits the margin out before any
- * time-gated call.
+ * Book a rental that starts as soon as the validator allows.
+ *
+ * `create_rental` requires `start_ts >= Clock::get()`, and the transaction is
+ * built *after* the timestamp is chosen, so a fixed lead can lose the race: a
+ * short one reverts with `StartInPast`, and a long one makes every time-gated
+ * case sit and wait. Instead, start with a small lead and, only if the program
+ * actually returns `StartInPast`, retry with a fresh timestamp and a larger
+ * lead. Retrying is safe: the failed `init` created no rental account and the
+ * same `rental_id` is reused, so no second escrow can be taken.
  */
-const START_MARGIN = Number(process.env.START_MARGIN ?? 30);
+const BOOK_LEAD_SECONDS = Number(process.env.BOOK_LEAD_SECONDS ?? 5);
+
+async function bookStartingSoon(
+  listing: PublicKey,
+  rentalId: Buffer,
+  days: number
+): Promise<{ signature: TransactionSignature; startTs: number }> {
+  let lead = BOOK_LEAD_SECONDS;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const startTs = (await chainNow()) + lead;
+    try {
+      const { signature } = await createRental(program, {
+        renter: renter.publicKey,
+        listing,
+        rentalId,
+        startTs,
+        days,
+        signers: [renter],
+      });
+      return { signature, startTs };
+    } catch (error) {
+      if (programErrorCode(error) !== RENTAL_ERROR_CODE.StartInPast) throw error;
+      console.warn(`  booking start_ts lost the clock race; retrying with lead=${lead * 2}s`);
+      lead = Math.max(lead * 2, 10);
+    }
+  }
+  throw new Error("could not book a rental that starts in the near future");
+}
+
 const waitForStart = async (ts: number): Promise<void> => {
   while ((await chainNow()) < ts + START_EXTRA) {
     await new Promise((resolve) => setTimeout(resolve, 400));
@@ -218,10 +250,14 @@ async function scenario(
   }
 }
 
-const codeOf = (err: unknown): number | undefined => {
-  const e = err as any;
-  return e?.error?.errorCode?.number ?? e?.error?.errorCode?.code ?? e?.errorCode?.number;
-};
+/**
+ * Recover the program error code from any failure shape.
+ *
+ * The old `e?.error?.errorCode?.number` path returned `undefined` for every
+ * failed instruction because Anchor 0.30 + web3.js >= 1.95 mask the error as
+ * `Unknown action 'undefined'` (the client re-simulates to recover the logs).
+ */
+const codeOf = (err: unknown): number | undefined => programErrorCode(err);
 
 async function expectError(fn: () => Promise<unknown>, name: keyof typeof RENTAL_ERROR_CODE): Promise<void> {
   const expected = RENTAL_ERROR_CODE[name as string];
@@ -229,7 +265,13 @@ async function expectError(fn: () => Promise<unknown>, name: keyof typeof RENTAL
     await fn();
   } catch (err) {
     const code = codeOf(err);
-    assert.equal(code, expected, `expected ${String(name)} (${expected}), got ${code}`);
+    const failure = parseProgramError(err);
+    const detail = failure.logs.length > 0 ? `\n${failure.logs.join("\n")}` : "";
+    assert.equal(
+      code,
+      expected,
+      `expected ${String(name)} (${expected}), got ${code ?? `<no code: ${failure.message}>`}${detail}`
+    );
     return;
   }
   assert.fail(`expected ${String(name)}, but the call succeeded`);
@@ -588,15 +630,7 @@ describe("asset-rental", () => {
     const [mismatchRental] = rentalPda(l2, mismatchId);
     // Anchor on the chain clock: the rental must start on-chain before the
     // owner can settle it.
-    const immediate = (await chainNow()) + START_MARGIN;
-    await createRental(program, {
-      renter: renter.publicKey,
-      listing: l2,
-      rentalId: mismatchId,
-      startTs: immediate,
-      days: 1,
-      signers: [renter],
-    });
+    const { startTs: immediate } = await bookStartingSoon(l2, mismatchId, 1);
     await expectError(
       () =>
         settleRental(program, {
@@ -664,15 +698,7 @@ describe("asset-rental", () => {
   it("cancel: post-start cancellation is denied", async () => {
     const rentalId = newRentalId();
     const [rental] = rentalPda(l2, rentalId);
-    const immediate = (await chainNow()) + START_MARGIN;
-    await createRental(program, {
-      renter: renter.publicKey,
-      listing: l2,
-      rentalId,
-      startTs: immediate,
-      days: 1,
-      signers: [renter],
-    });
+    const { startTs: immediate } = await bookStartingSoon(l2, rentalId, 1);
     await waitForStart(immediate);
 
     await expectError(
@@ -705,18 +731,10 @@ describe("asset-rental", () => {
     const days = 2;
     const priceTotal = L2_PRICE * days;
     const fee = Math.floor((priceTotal * 250) / 10_000);
-    const immediate = (await chainNow()) + START_MARGIN;
 
     await scenario("settle", { l2, rental, treasury: treasury.publicKey }, async () => {
-      await createRental(program, {
-        renter: renter.publicKey,
-        listing: l2,
-        rentalId,
-        startTs: immediate,
-        days,
-        signers: [renter],
-      });
-      await waitForStart(immediate);
+      const { startTs } = await bookStartingSoon(l2, rentalId, days);
+      await waitForStart(startTs);
 
       const treasuryBefore = await balance(treasury.publicKey);
       const renterBefore = await balance(renter.publicKey);
@@ -933,16 +951,7 @@ describe("asset-rental", () => {
   it("pause: blocks new rentals, existing rentals still settle", async () => {
     const rentalId = newRentalId();
     const [rental] = rentalPda(l2, rentalId);
-    const immediate = (await chainNow()) + START_MARGIN;
-
-    await createRental(program, {
-      renter: renter.publicKey,
-      listing: l2,
-      rentalId,
-      startTs: immediate,
-      days: 1,
-      signers: [renter],
-    });
+    const { startTs: immediate } = await bookStartingSoon(l2, rentalId, 1);
 
     await setConfig(program, { admin: admin.publicKey, paused: true, signers: [admin] });
     await expectError(
@@ -989,15 +998,7 @@ describe("asset-rental", () => {
 
     const rentalId = newRentalId();
     const [rental] = rentalPda(listing, rentalId);
-    const immediate = (await chainNow()) + START_MARGIN;
-    await createRental(program, {
-      renter: renter.publicKey,
-      listing,
-      rentalId,
-      startTs: immediate,
-      days: 1,
-      signers: [renter],
-    });
+    const { startTs: immediate } = await bookStartingSoon(listing, rentalId, 1);
 
     await expectError(
       () => closeListing(program, { owner: ownerA.publicKey, listing, signers: [ownerA] }),

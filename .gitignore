@@ -10,6 +10,13 @@ node_modules/
 test-ledger/
 .nyc_output/
 
+# Backend runtime state (mirror, media, audit, local DBs)
+var/
+backend/var/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
 # Editors and OS noise
 .DS_Store
 *.log

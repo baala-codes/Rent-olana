@@ -31,11 +31,16 @@ rustc --version
 The program is pinned to `anchor-lang 0.30.1`, so the Anchor CLI must be
 `0.30.1`. If another version is active, run `avm use 0.30.1`.
 
-Node 18+ is needed for the TypeScript tests. Then, from the repository root:
+Node 22 LTS is required: `ts-mocha`, which the Anchor acceptance suite uses,
+does not run on Node 26 (a yargs/ESM incompatibility). Then, from the repository
+root:
 
 ```bash
-npm install
+npm ci
 ```
+
+The portal, `shared/`, and `backend/` each have their own `package.json` and are
+installed separately when you work on them (`npm install` in that directory).
 
 ## 2. Wallets
 
@@ -43,9 +48,14 @@ Five role wallets plus the program keypair. All of them live in `.keys/`, which
 is gitignored — never commit or share these files.
 
 ```bash
-mkdir -p .keys
-python3 scripts/gen-keypairs.py .keys admin treasury owner_a owner_b renter program
+bash scripts/bootstrap-keys.sh --program   # or: npm run keys:init
 ```
+
+That creates the five role wallets (and the program keypair with `--program`) in
+`.keys/`, links `target/deploy/asset_rental-keypair.json`, and prints the public
+addresses. It never overwrites an existing key. `scripts/anchor.sh` also calls
+it automatically before any command that needs a signing wallet, so a fresh
+clone can run the localnet suite without a separate step.
 
 `scripts/gen-keypairs.py` is a pure-stdlib fallback for environments without the
 Solana CLI. If you have `solana-keygen`, the equivalent is:
@@ -86,33 +96,31 @@ migration.
 
 ## 3. Program ID — the one value that must match everywhere
 
-The program ID appears in **three** places and they must agree:
+The program ID must agree across the Rust declaration, `Anchor.toml`, and the
+published IDL. The client constants are **generated** from the IDL, so they
+cannot disagree on their own.
 
 | Location | Written as |
 | --- | --- |
 | `programs/asset-rental/src/lib.rs` | `declare_id!("…")` |
 | `Anchor.toml` | `[programs.devnet] asset_rental = "…"` and `[programs.localnet]` |
-| `clients/ts/constants.ts` | `export const PROGRAM_ID = new PublicKey("…")` |
+| `clients/idl/asset_rental.json` | `"address": "…"` (build output) |
+| `clients/ts/generated.ts` | generated from the IDL — do not edit |
 
 On a fresh clone, the checked-in ID will not match your own program keypair. Fix
 it in one step:
 
 ```bash
-mkdir -p target/deploy
-cp .keys/program.json target/deploy/asset_rental-keypair.json
-anchor keys sync      # rewrites lib.rs and Anchor.toml to your keypair's key
+bash scripts/bootstrap-keys.sh --program   # creates the key and runs keys sync
+bash scripts/export-clients.sh             # rebuilds the IDL + generated client
 ```
 
-Then set `PROGRAM_ID` in `clients/ts/constants.ts` to the same value. The
-`anchor keys sync` command does not touch the TypeScript file; verify with:
+`export-clients.sh` then runs `scripts/check-contract.mjs`, which fails if the
+ID, the IDL, the client constants, or the builder set disagree:
 
 ```bash
-grep -n declare_id programs/asset-rental/src/lib.rs
-grep -n asset_rental Anchor.toml
-grep -n PublicKey clients/ts/constants.ts
+npm run contract:check
 ```
-
-`bash scripts/export-clients.sh` re-checks all three and fails if they disagree.
 
 Keep `target/deploy/asset_rental-keypair.json` and `.keys/program.json` safe: if
 you lose them you cannot upgrade the deployed program under the same address.
@@ -221,7 +229,36 @@ anchor test --provider.cluster devnet
 `test-ledger/` is gitignored. Fixtures written by the suite land in
 `fixtures/` — see [fixtures/README.md](../fixtures/README.md).
 
-## 9. Troubleshooting
+The validator-free checks (no Rust or Solana toolchain required):
+
+```bash
+npm run contract:check     # IDL / program ID / builder drift
+npm run test:client        # encoding, decoders, error parsing
+npm run test:shared        # metadata commitment and search limits
+npm run test:backend       # mirror, search, auth, media, HTTP API
+```
+
+## 9. Run the backend
+
+```bash
+cd backend
+npm install
+ADMIN_TOKEN=dev-only-token npm start     # http://127.0.0.1:8787
+```
+
+The mirror starts empty. Populate it from finalized devnet state:
+
+```bash
+curl -X POST -H "x-admin-token: dev-only-token" http://127.0.0.1:8787/v1/admin/sync
+```
+
+Set `SYNC_ON_START=1` and/or `SYNC_INTERVAL_MS=60000` to do that on a schedule.
+See [backend/README.md](../backend/README.md) for the full API, configuration,
+and the wallet-signature scheme used for owner-only metadata/media writes.
+Do **not** expose the backend without a reverse proxy and TLS: wallet signatures
+protect writes, but reads and media are public by design.
+
+## 10. Troubleshooting
 
 | Symptom | Cause and fix |
 | --- | --- |
@@ -231,6 +268,6 @@ anchor test --provider.cluster devnet
 | `AnchorError caused by account: listing. Error Code: ConstraintSeeds` | The client derived a PDA with a different program ID or `asset_id` than the account was created with. |
 | `ConstraintHasOne` on `settle_rental` / `cancel_rental` | The `owner_wallet` / `renter_wallet` passed does not match the stored rental party. |
 | Deploy fails with insufficient funds | Fund `.keys/admin.json` with devnet SOL; deployment rent is a few SOL. |
-| `anchor keys sync` changed the ID | Expected: it rewrites `lib.rs` and `Anchor.toml`. Update `clients/ts/constants.ts`, rebuild, and redeploy. |
+| `anchor keys sync` changed the ID | Expected: it rewrites `lib.rs` and `Anchor.toml`. Run `bash scripts/export-clients.sh` to rebuild the IDL and regenerate the client constants, then redeploy. |
 | Tests fail with `Account does not exist` | Run against a fresh localnet, or you are pointed at a different cluster than the accounts were created on. |
 | Airdrop fails | Devnet faucet rate limit; wait or fund from another wallet. |

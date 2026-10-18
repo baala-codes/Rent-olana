@@ -41,21 +41,16 @@ mkdir -p clients/idl clients/types
 cp "$IDL" clients/idl/asset_rental.json
 cp "$TYPES" clients/types/asset_rental.ts
 
+# Regenerate the typed constants the portal, backend and tests import. The IDL
+# is the single source of the discriminators, so this must run after every copy.
+echo "==> generating clients/ts/generated.ts"
+node "$ROOT/scripts/gen-client-constants.mjs"
+
 echo "==> published"
 echo "    clients/idl/asset_rental.json"
 echo "    clients/types/asset_rental.ts"
+echo "    clients/ts/generated.ts"
 
-# Guard against the program ID drifting between the three places it is written.
-DECLARED="$(grep -oE 'declare_id!\("[1-9A-HJ-NP-Za-km-z]+"\)' programs/asset-rental/src/lib.rs | grep -oE '"[1-9A-HJ-NP-Za-km-z]+"' | tr -d '"')"
-ANCHOR_TOML="$(grep -E '^asset_rental = ' Anchor.toml | head -1 | grep -oE '"[1-9A-HJ-NP-Za-km-z]+"' | tr -d '"')"
-CLIENT_TS="$(grep -oE 'new PublicKey\("[1-9A-HJ-NP-Za-km-z]+"\)' clients/ts/constants.ts | grep -oE '"[1-9A-HJ-NP-Za-km-z]+"' | tr -d '"')"
-
-echo "==> program ID check"
-printf '    lib.rs        %s\n' "$DECLARED"
-printf '    Anchor.toml   %s\n' "$ANCHOR_TOML"
-printf '    constants.ts  %s\n' "$CLIENT_TS"
-
-if [ "$DECLARED" != "$ANCHOR_TOML" ] || [ "$DECLARED" != "$CLIENT_TS" ]; then
-  echo "error: program ID mismatch across lib.rs, Anchor.toml, and clients/ts/constants.ts" >&2
-  exit 1
-fi
+# Guard against drift in every place the program ID is written.
+echo "==> contract check"
+node "$ROOT/scripts/check-contract.mjs"

@@ -31,15 +31,13 @@ The authoritative design and build plan live alongside this repository:
 | [`programs/`](programs/) | The Anchor program. `asset-rental/` is the live crate; `billing-access/` is a superseded legacy scope note. |
 | [`clients/`](clients/) | Published client contract: hand-written TS PDA/instruction helpers and generated IDL/types. |
 | [`docs/`](docs/) | Frozen on-chain contract, transaction examples, setup/deploy runbook, and diagrams. |
-| [`backend/`](backend/) | Provider backend: geo/category search index, media, rental/order mirror, reconciliation. |
+| [`backend/`](backend/) | Provider backend: geo/category search, metadata, media, rental mirror, reconciliation, JSONL audit. |
 | [`frontend/`](frontend/) | Browser portal for Phantom/Solflare: listing management, search, booking, settle/cancel/dispute. |
-| [`shared/`](shared/) | Interface definitions shared between the program clients, backend, and portal. |
-| [`infra/`](infra/) | Toolchain, key setup, devnet deploy runbook, Docker packaging, host/VM wiring. |
+| [`shared/`](shared/) | Off-chain contract: metadata commitment, API DTOs, search parsing, categories. |
 | [`migrations/`](migrations/) | Anchor deploy hook (`deploy.ts`) used to initialize platform config. |
 | [`scripts/`](scripts/) | Toolchain install, keypair generation, client export, diagram rendering. |
 | [`fixtures/`](fixtures/) | Committed, non-secret on-chain fixtures produced by the test suite. |
 | [`tests/`](tests/) | Cross-component acceptance suite and fixture generation. |
-| [`ssh/`](ssh/) | Wallet-authenticated SSH workstream (separate Rust + QEMU test project). |
 
 The Anchor workspace root is this directory: `Anchor.toml`, `Cargo.toml`,
 `tests/`, and `migrations/` all live here, and `programs/asset-rental` is the
@@ -57,9 +55,9 @@ Browser portal + wallet  ------>  Solana RPC  <------  Provider backend
 
 | Component | Responsibility |
 | --- | --- |
-| Browser portal + wallet | Listing CRUD, search UI (backed by the backend index), booking flow, rental status, settle/cancel/dispute actions, transaction signing. |
+| Browser portal + wallet | Listing CRUD, search UI, booking flow, rental status, settle/cancel/dispute actions, transaction signing. |
 | Solana program | Listing terms and authorization, booking validation, overlap prevention, escrow custody, settlement splits, cancellation refunds, dispute freeze/resolution, platform pause, events. |
-| Provider backend | Geo/category search index, asset images and large metadata, off-chain availability, rental/order mirror for UX, reconciliation, notifications. Never decides fund movement. |
+| Provider backend | Geo/category search, metadata and images, availability display, rental mirror, reconciliation, JSONL audit. Wallet-signed owner writes. Never decides fund movement. |
 | Admin operations | `initialize_config`, `set_config` (treasury, fee, pause), `resolve_dispute`. Admin cannot sweep escrow. |
 
 ## On-chain accounts
@@ -114,14 +112,34 @@ BPS_DENOMINATOR   = 10_000
 
 ```bash
 bash scripts/install-toolchain.sh       # Rust + Solana CLI 1.18.x + Anchor 0.30.1
-anchor build                            # program, IDL, generated TS types
-anchor test --provider.cluster localnet # isolated program tests
+npm install                             # client/test dependencies
+npm run keys:init                       # create .keys/ role wallets (gitignored)
+npm run build                           # program + IDL + generated client types
+npm test                                # isolated localnet program tests
 ```
 
-Then generate wallets and deploy — see [`docs/SETUP.md`](docs/SETUP.md). The
-program ID is written in three places (`declare_id!`, `Anchor.toml`,
-`clients/ts/constants.ts`) and `scripts/export-clients.sh` fails if they
-disagree.
+Node 22 LTS is required for the tooling (`ts-mocha` does not run on Node 26).
+Anchor test signing needs the five role wallets in `.keys/`; `npm run keys:init`
+creates them on a fresh clone, and the test suite needs no funding on localnet.
+
+Then deploy — see [`docs/SETUP.md`](docs/SETUP.md). The program ID is written in
+`declare_id!` and `Anchor.toml`; the client constants are generated from the
+published IDL (`clients/ts/generated.ts`). `npm run contract:check` fails if the
+ID, the IDL, and the client builders disagree.
+
+## Backend and shared contract
+
+```bash
+npm run contract:check     # IDL/ID/client drift check (no build required)
+npm run test:client        # encoding + decoder + error-parsing tests
+cd shared && npm install && npm test      # metadata commitment, API limits
+cd backend && npm install && npm test     # search, mirror, auth, media, API
+```
+
+The backend mirrors **finalized** chain state into SQLite and serves search,
+metadata, media, and order history. It never decides fund movement. See
+[`backend/README.md`](backend/README.md) for the API and the wallet-signature
+scheme; the portal/backend payloads live in [`shared/`](shared/).
 
 ## Wallet roles
 
@@ -140,6 +158,6 @@ Keypairs live in the gitignored `.keys/` directory and are never committed.
 The POC is a solo build with three streams (see architecture §13):
 
 1. **On-chain program** — accounts, instructions, events, client helpers, deployment, tests, fixtures.
-2. **Portal + backend** — wallet portal, listing CRUD, geo/category search index, media storage, rental/order mirror, reconciliation, Docker packaging.
-3. **Infra/docs** — toolchain, key setup, deploy runbook, contract/architecture docs, acceptance runner.
+2. **Portal + backend** — wallet portal, listing CRUD, geo/category search, media storage, rental/order mirror, reconciliation, JSONL audit.
+3. **Docs/tooling** — toolchain, key bootstrap, deploy runbook, contract/architecture docs, acceptance runner, drift checks.
 

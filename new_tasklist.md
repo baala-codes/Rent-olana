@@ -95,7 +95,7 @@ in `new_architecture.md`.
 63. Run `anchor build`; copy `target/idl/asset_rental.json` and `target/types/asset_rental.ts` into `clients/idl/` and `clients/types/` via a ported `scripts/export-clients.sh`.
 64. Create `clients/ts/constants.ts`: `PROGRAM_ID`, `CLUSTER`, `RPC_URL`, seed prefixes (`config`/`asset`/`rental`), `ACCOUNT_LEN` table, `RENTAL_STATUS` discriminants, `RENTAL_ERRORS` code table (base 6000, append-only), `GRACE_SECONDS`, `MAX_FEE_BPS`, `SECONDS_PER_DAY`.
 65. Create `clients/ts/pda.ts`: `configPda()`, `listingPda(owner, assetId)`, `rentalPda(listing, rentalId)` with `toBytes32` length checks; byte-for-byte identical to `state.rs` seeds.
-66. Create `clients/ts/instructions.ts`: `newAssetId()` and `newRentalId()` (32 random bytes via `crypto.randomBytes`, persist-before-submit) and builders for all 11 instructions, deriving every PDA internally (mirror the old file's structure).
+66. Create `clients/ts/instructions.ts`: `newAssetId()` and `newRentalId()` (32 random bytes via `crypto.randomBytes`, persist-before-submit) and builders for all 12 instructions, deriving every PDA internally (mirror the old file's structure).
 67. Create `clients/ts/index.ts` barrel export.
 68. Write `docs/CONTRACT.md`: program ID, cluster, byte-offset tables per account, seed byte tables, instruction table with discriminators and account lists, error table, read-side rules for the backend mirror, and a deliberate-deviations table.
 69. Write `docs/EXAMPLES.md`: one worked example per instruction with ordered account lists.

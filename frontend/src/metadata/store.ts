@@ -1,84 +1,46 @@
 /**
- * Off-chain asset metadata.
+ * Off-chain asset metadata storage (browser side).
  *
- * The program stores only a 32-byte `metadata_hash` commitment and a category
- * code; the human-readable document (name, description, photo, location) lives
- * off-chain. This POC keeps that document in the browser's `localStorage`,
- * keyed by the SHA-256 of a canonical JSON encoding — which is exactly the
- * value written on-chain as `metadata_hash`, so a listing's document can be
- * verified against the chain.
+ * The commitment itself — canonical JSON + SHA-256 — lives in
+ * `@asset-rental/shared`, the same code the backend uses, so a document stored
+ * here and a document verified there hash identically. This file only adds
+ * `localStorage` persistence.
  *
- * A production build would put this behind the provider backend / object
- * storage; the commitment, not the storage, is what the contract fixes.
+ * The program stores just the 32-byte `metadata_hash` and a category; the
+ * human-readable document stays off-chain. Because the encoding is canonical,
+ * the same document always commits to the same hash and can be checked against
+ * the chain.
  */
 
-export interface AssetMetadata {
+import {
+  canonicalMetadata,
+  hexToBytes,
+  metadataHashHex,
+  validateMetadata,
+  bytesToHex,
+  type MetadataDocument,
+  type MetadataInput,
+  type MetadataLocation,
+} from "@shared";
+
+export type { MetadataDocument, MetadataInput, MetadataLocation };
+
+/** A stored document plus the commitment written on chain. */
+export interface AssetMetadata extends MetadataDocument {
   /** Lowercase hex SHA-256 of the canonical document (the on-chain commit). */
   metadataHash: string;
-  name: string;
-  description: string;
-  category: number;
-  location: MetadataLocation | null;
-  images: string[];
   updatedAt: string;
-}
-
-export interface MetadataLocation {
-  label?: string;
-  lat?: number;
-  lng?: number;
-}
-
-/** The user-editable part of a metadata document. */
-export interface MetadataInput {
-  name: string;
-  description?: string;
-  category?: number;
-  location?: MetadataLocation | null;
-  images?: string[];
 }
 
 const STORAGE_KEY = "rent-olana:metadata:v1";
 
-export const hashToHex = (bytes: Uint8Array): string =>
-  Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+/** Hex helper kept for callers that hold raw bytes. */
+export const hashToHex = bytesToHex;
 
-export function hexToBytes(hex: string): Uint8Array {
-  if (hex.length % 2 !== 0) throw new Error("hex string must have even length");
-  const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i += 1) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  return out;
-}
-
-/**
- * Canonical JSON for hashing. Key order is fixed here (not left to the
- * engine) so the same document always hashes to the same commitment.
- */
-export function canonicalDocument(input: MetadataInput): string {
-  const location = input.location
-    ? {
-        label: input.location.label?.trim() ?? "",
-        lat: input.location.lat ?? null,
-        lng: input.location.lng ?? null,
-      }
-    : null;
-  return JSON.stringify({
-    name: input.name.trim(),
-    description: (input.description ?? "").trim(),
-    category: input.category ?? 0,
-    location,
-    images: input.images ?? [],
-  });
-}
+export { hexToBytes, canonicalMetadata };
 
 /** SHA-256 of the canonical document, as 64 hex characters (32 bytes). */
-export async function computeMetadataHash(input: MetadataInput): Promise<string> {
-  const bytes = new TextEncoder().encode(canonicalDocument(input));
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return hashToHex(new Uint8Array(digest));
-}
+export const computeMetadataHash = metadataHashHex;
 
 // ------------------------------------------------------------------ storage
 
@@ -115,18 +77,29 @@ export function getMetadata(hash: string): AssetMetadata | undefined {
   return readAll()[hash.toLowerCase()];
 }
 
-/** Compute the commitment for `input`, store the document, and return it. */
+/**
+ * Validate, canonicalise, hash, and store a document.
+ *
+ * Throws on an invalid document rather than storing something whose hash the
+ * caller might still write on chain — a listing must never point at a document
+ * the backend would reject.
+ */
 export async function saveMetadata(input: MetadataInput): Promise<AssetMetadata> {
-  const hash = await computeMetadataHash(input);
+  const validation = validateMetadata(input);
+  if (!validation.ok) {
+    throw new Error(
+      validation.issues.map((issue) => `${issue.field}: ${issue.message}`).join("; ")
+    );
+  }
+
+  const document = validation.value;
+  const hash = await metadataHashHex(document);
   const record: AssetMetadata = {
+    ...document,
     metadataHash: hash,
-    name: input.name.trim(),
-    description: (input.description ?? "").trim(),
-    category: input.category ?? 0,
-    location: input.location ?? null,
-    images: input.images ?? [],
     updatedAt: new Date().toISOString(),
   };
+
   const all = readAll();
   all[hash] = record;
   writeAll(all);

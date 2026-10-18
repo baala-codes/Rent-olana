@@ -19,7 +19,7 @@ import {
   type Listing,
   type Rental,
 } from "./solana/accounts";
-import { RENTAL_ERRORS } from "./solana/constants";
+import { parseProgramError } from "@rental-client/wire";
 import { sendInstructions } from "./solana/tx";
 import { getMetadataMany, hashToHex, type AssetMetadata } from "./metadata/store";
 
@@ -208,31 +208,13 @@ export function useProgram(): ProgramValue {
   return value;
 }
 
-/** Turn a wallet/anchor error into something a human can read. */
+/**
+ * Turn a wallet/anchor error into something a human can read.
+ *
+ * `parseProgramError` recovers the program's code, name and message from the
+ * logs, which matters because Anchor 0.30 + web3.js >= 1.95 can otherwise
+ * surface a bare `Unknown action 'undefined'`.
+ */
 export function describeError(cause: unknown): string {
-  if (typeof cause === "string") return cause;
-  if (cause && typeof cause === "object") {
-    const record = cause as Record<string, unknown>;
-    if (record.error && typeof record.error === "object") {
-      const inner = record.error as Record<string, unknown>;
-      if (typeof inner.errorMessage === "string") return inner.errorMessage;
-      if (typeof inner.message === "string") return inner.message;
-    }
-    if (typeof record.message === "string") {
-      // Anchor surfaces custom errors as "custom program error: 0x177X".
-      const match = record.message.match(/custom program error: 0x([0-9a-fA-F]+)/);
-      if (match) {
-        const code = parseInt(match[1], 16);
-        const known = ERROR_TEXT[code];
-        if (known) return known;
-      }
-      return record.message;
-    }
-  }
-  return String(cause);
+  return parseProgramError(cause).message;
 }
-
-/** `0x1770` = 6000, the first custom error code. */
-const ERROR_TEXT: Record<number, string> = Object.fromEntries(
-  Object.entries(RENTAL_ERRORS).map(([code, [, message]]) => [Number(code), message])
-);

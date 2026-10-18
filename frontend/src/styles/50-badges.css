@@ -1,0 +1,53 @@
+/* --------------------------------------------------------------- badges */
+
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge.open {
+  color: var(--amber);
+  background: rgba(255, 176, 32, 0.12);
+  border-color: rgba(255, 176, 32, 0.35);
+}
+
+.badge.active {
+  color: #062a1c;
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.badge.good {
+  color: #fff;
+  background: rgba(153, 69, 255, 0.85);
+  border-color: rgba(153, 69, 255, 0.9);
+}
+
+.badge.muted {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--line-strong);
+}
+
+.badge.frozen {
+  color: #fff;
+  background: rgba(255, 92, 124, 0.85);
+  border-color: rgba(255, 92, 124, 0.9);
+}
+
+.badge.plain {
+  color: var(--muted);
+  background: transparent;
+  border-color: var(--line-strong);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+

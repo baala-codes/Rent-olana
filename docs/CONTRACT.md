@@ -341,3 +341,4 @@ BPS_DENOMINATOR   = 10_000
 | `resolve_dispute` argument check | task list used `FeeTooHigh` for `owner_share_bps` | A dedicated `InvalidShare` (6022) is used so the fee message stays accurate. |
 | Admin mismatch error | task list names `Unauthorized` | `Unauthorized` (6020) is used for both `set_config` and `resolve_dispute`. |
 | `settle_rental` payees | task list leaves `owner_wallet`/`renter_wallet` unconstrained | They are bound to `rental.owner` / `rental.renter` so a caller cannot redirect a payout. |
+| `RentalStatus::Active` | architecture says a rental becomes `Active` at `start_ts` | No instruction writes it. Open rentals stay `Reserved`; every gate uses `is_open()` (`Reserved` or `Active`), so status is temporal and `Active` is retained for forward compatibility. `close_rental` still accepts only terminal states. |

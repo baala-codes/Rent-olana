@@ -23,6 +23,9 @@ export interface BackendConfig {
   maxUploadBytes: number;
   syncIntervalMs: number;
   syncOnStart: boolean;
+  /** Best-effort webhook for terminal rental transitions. Unset disables it. */
+  notifyWebhookUrl: string | null;
+  notifyTimeoutMs: number;
   /** Trust `x-forwarded-for` for rate limiting behind a reverse proxy. */
   trustProxy: boolean;
 }
@@ -67,6 +70,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): BackendConfig 
     maxUploadBytes: integer(env.MAX_UPLOAD_BYTES, 5 * 1024 * 1024, "MAX_UPLOAD_BYTES"),
     syncIntervalMs: integer(env.SYNC_INTERVAL_MS, 0, "SYNC_INTERVAL_MS"),
     syncOnStart: boolean(env.SYNC_ON_START, false),
+    notifyWebhookUrl: env.NOTIFY_WEBHOOK_URL?.trim() || null,
+    notifyTimeoutMs: integer(env.NOTIFY_TIMEOUT_MS, 5_000, "NOTIFY_TIMEOUT_MS"),
     trustProxy: boolean(env.TRUST_PROXY, false),
   };
 }

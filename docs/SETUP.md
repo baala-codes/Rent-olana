@@ -68,27 +68,33 @@ done
 
 | Key | Role | Needs SOL? |
 | --- | --- | --- |
-| `admin` | initializes/mutates `PlatformConfig`; resolves disputes; deploy authority | yes |
+| `admin` | initializes/mutates `PlatformConfig`; resolves disputes; deploy authority | yes — deploy + funds the suite |
 | `treasury` | receives the platform fee | no — it only receives |
-| `owner_a` | registers listings and settles rentals | yes |
-| `owner_b` | registers listings and settles rentals | yes |
-| `renter` | books listings and escrows price + deposit | yes |
-| `program` | the program account itself | yes, for deploy rent |
+| `owner_a` | registers listings and settles rentals | no for the suite — funded by `admin` |
+| `owner_b` | registers listings and settles rentals | no for the suite — funded by `admin` |
+| `renter` | books listings and escrows price + deposit | no for the suite — funded by `admin` |
+| `program` | the program account itself | no — `admin` pays deploy rent |
 
-Fund them on devnet:
+Fund **only `admin`** on devnet. The acceptance suite sends **0.05 SOL** to each
+role wallet, so the test run itself needs about 0.2 SOL; deployment rent is on
+top of that.
 
 ```bash
 solana config set --url https://api.devnet.solana.com
+addr=$(solana-keygen pubkey ".keys/admin.json")
 
-for k in admin owner_a owner_b renter; do
-  addr=$(solana-keygen pubkey ".keys/$k.json")
-  solana airdrop 2 "$addr" --url devnet
-  solana balance "$addr" --url devnet
-done
+# Public RPC is usually rate-limited. Prefer a provider faucet/RPC:
+#   https://faucet.quicknode.com/solana/devnet
+#   https://faucet.solana.com/
+#   Helius dashboard -> Devnet faucet
+solana airdrop 1 "$addr" --url devnet
+solana balance "$addr" --url devnet
 ```
 
-The airdrop is rate-limited per IP. If it fails, fund the addresses from another
-source or use `solana airdrop 1`. The treasury needs no SOL; it only receives.
+The airdrop is rate-limited per IP. If it fails, use a provider faucet or
+another funded wallet. The treasury needs no SOL; it only receives. If you want
+to exercise the role wallets directly instead of through the suite, fund each
+of them separately.
 
 `Anchor.toml` points `provider.wallet` at `.keys/admin.json`, so the admin
 keypair is also the deploy authority and signs `initialize_config` in the
@@ -258,7 +264,28 @@ and the wallet-signature scheme used for owner-only metadata/media writes.
 Do **not** expose the backend without a reverse proxy and TLS: wallet signatures
 protect writes, but reads and media are public by design.
 
-## 10. Troubleshooting
+## 10. Docker (optional local packaging)
+
+Build from the repository root; both images need the shared client and shared
+package:
+
+```bash
+docker compose up --build
+# portal:  http://localhost:8080
+# backend: http://localhost:8787
+docker compose exec backend sh -c 'curl -s localhost:8787/health'
+```
+
+The backend starts with `SYNC_ON_START=1` and `SYNC_INTERVAL_MS=60000` in
+`docker-compose.yml`, so the index fills from devnet automatically. Set
+`ADMIN_TOKEN`, `NOTIFY_WEBHOOK_URL`, or `RPC_URL` in the environment to override
+the local defaults. The mirror and media live in the `mirror-data` volume.
+
+CI is in `.github/workflows/ci.yml`: one job runs `npm run verify` plus the
+portal build; a second runs `cargo test`, `anchor build`, and the localnet
+acceptance suite on a toolchain host.
+
+## 11. Troubleshooting
 
 | Symptom | Cause and fix |
 | --- | --- |

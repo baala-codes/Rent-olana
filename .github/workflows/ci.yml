@@ -1,0 +1,57 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    name: contract + backend + portal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run verify
+
+      - name: backend typecheck
+        run: cd backend && npm ci && npm run typecheck
+      - name: shared typecheck
+        run: cd shared && npm ci && npm run typecheck
+      - name: portal build
+        run: cd frontend && npm ci && npm run build
+
+  anchor:
+    name: program + localnet acceptance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Rust, Solana, Anchor
+        run: bash scripts/install-toolchain.sh
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Rust unit tests
+        run: |
+          export PATH="$HOME/.cargo/bin:$HOME/.local/share/solana/install/active_release/bin:$HOME/.avm/bin:$PATH"
+          cargo test -p asset-rental
+
+      - name: Build program and IDL
+        run: |
+          export PATH="$HOME/.cargo/bin:$HOME/.local/share/solana/install/active_release/bin:$HOME/.avm/bin:$PATH"
+          bash scripts/anchor.sh build
+
+      - name: Localnet acceptance suite
+        run: |
+          export PATH="$HOME/.cargo/bin:$HOME/.local/share/solana/install/active_release/bin:$HOME/.avm/bin:$PATH"
+          bash scripts/anchor.sh test --provider.cluster localnet

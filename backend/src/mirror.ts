@@ -24,6 +24,7 @@ import type {
 import type { AuditLog } from "./audit.ts";
 import type { ChainReader } from "./chain.ts";
 import type { ListingRow, ListingRowWithMetadata, MirrorDb, RentalRow } from "./db.ts";
+import type { Notifier } from "./notifications.ts";
 
 const iso = (clock: () => Date): string => clock().toISOString();
 
@@ -163,8 +164,28 @@ export class MirrorService {
     private readonly db: MirrorDb,
     private readonly chain: ChainReader,
     private readonly audit: AuditLog,
-    private readonly clock: () => Date = () => new Date()
+    private readonly clock: () => Date = () => new Date(),
+    private readonly notifier: Notifier | null = null
   ) {}
+
+  /**
+   * Hand a transition to the optional notifier without awaiting it. A webhook
+   * outage must never delay or fail a sync, so failures are swallowed here and
+   * reported by the notifier itself.
+   */
+  private publish(event: AuditEvent): void {
+    if (!this.notifier) return;
+    try {
+      const result = this.notifier.notify(event);
+      if (result && typeof (result as Promise<void>).catch === "function") {
+        void (result as Promise<void>).catch((error) =>
+          console.error("notification hook failed (event kept in the audit log)", error)
+        );
+      }
+    } catch (error) {
+      console.error("notification hook failed (event kept in the audit log)", error);
+    }
+  }
 
   /** Pull full program state and upsert it. Throws if the RPC read fails. */
   async sync(): Promise<SyncReport> {
@@ -230,13 +251,15 @@ export class MirrorService {
 
       const kind = !before ? "rental.created" : before.status !== row.status ? rentalEvent(row.status) : null;
       if (kind) {
-        await this.audit.append({
+        const event: AuditEvent = {
           at: confirmedAt,
           kind,
           subject: row.address,
           wallet: row.renter,
           detail: { listing: row.listing, status: row.status, escrow: row.escrow },
-        });
+        };
+        await this.audit.append(event);
+        this.publish(event);
         auditEvents += 1;
       }
     }
@@ -336,6 +359,22 @@ export class MirrorService {
         this.db.upsertRental(row);
         rentals.updated += 1;
         rentals.mismatched.push(address);
+
+        // A reconcile can be the first place a terminal transition is seen
+        // (for example after a restart). Notify for it, but leave audit
+        // bookkeeping to the mirror.reconciled event.
+        if (before.status !== row.status) {
+          const kind = rentalEvent(row.status);
+          if (kind) {
+            this.publish({
+              at: checkedAt,
+              kind,
+              subject: row.address,
+              wallet: row.renter,
+              detail: { listing: row.listing, status: row.status, escrow: row.escrow },
+            });
+          }
+        }
       }
     }
 

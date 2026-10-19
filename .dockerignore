@@ -1,0 +1,10 @@
+.git
+.keys
+.anchor
+target
+test-ledger
+node_modules
+**/node_modules
+**/dist
+**/var
+*.log

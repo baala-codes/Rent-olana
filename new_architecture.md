@@ -217,6 +217,12 @@ RentalAgreement  [b"rental"] + listing(32) + rental_id(32)   = 71 bytes
 `Cancelled(3)`, `Disputed(4)`, `Resolved(5)`. A rental is `Reserved` before
 `start_ts` and `Active` at/after `start_ts`.
 
+> **Implementation note (2026-10-18):** the deployed program does not write
+> `Active`; an open rental remains `Reserved` until it reaches a terminal state.
+> Every gate accepts `Reserved` or `Active` through `RentalStatus::is_open()`, so
+> the distinction is temporal rather than stored. `Active` stays in the enum for
+> wire compatibility with clients. See the deviation table in `docs/CONTRACT.md`.
+
 ```text
 Admin-signed:
   initialize_config(treasury, fee_bps)

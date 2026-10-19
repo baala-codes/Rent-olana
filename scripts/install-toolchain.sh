@@ -38,12 +38,16 @@ echo "==> avm (Anchor version manager)"
 if command -v avm >/dev/null 2>&1; then
   echo "    already installed"
 else
-  cargo install --git https://github.com/coral-xyz/anchor avm --locked
+  # Build avm with stable, not this repository's pinned toolchain: newer avm
+  # dependency versions require a rustc newer than the pinned IDL-build nightly.
+  RUSTUP_TOOLCHAIN=stable cargo install --git https://github.com/coral-xyz/anchor avm --locked
 fi
 
 echo "==> Anchor CLI ${ANCHOR_VERSION}"
-avm install "${ANCHOR_VERSION}" || echo "    (already installed, switching)"
-avm use "${ANCHOR_VERSION}"
+# The CLI itself is a host binary; build it on stable. scripts/anchor.sh selects
+# the pinned nightly only for the IDL build it performs.
+RUSTUP_TOOLCHAIN=stable avm install "${ANCHOR_VERSION}" || echo "    (already installed, switching)"
+RUSTUP_TOOLCHAIN=stable avm use "${ANCHOR_VERSION}"
 export PATH="$HOME/.avm/bin:$PATH"
 
 # anchor 0.30.1's IDL build exports RUSTUP_TOOLCHAIN=nightly itself, and the

@@ -15,6 +15,7 @@ import { MirrorDb } from "./db.ts";
 import { createApp } from "./http.ts";
 import { MediaStore } from "./media.ts";
 import { MirrorService } from "./mirror.ts";
+import { WebhookNotifier } from "./notifications.ts";
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -24,9 +25,12 @@ async function main(): Promise<void> {
   const audit = new AuditLog(config.auditPath);
   const media = new MediaStore(config.mediaDir, db);
   const chain = new SolanaChainReader(config.rpcUrl);
-  const mirror = new MirrorService(db, chain, audit);
+  const notifier = config.notifyWebhookUrl
+    ? new WebhookNotifier(config.notifyWebhookUrl, { timeoutMs: config.notifyTimeoutMs })
+    : null;
+  const mirror = new MirrorService(db, chain, audit, undefined, notifier);
 
-  const server = createApp({ config, db, audit, media, mirror });
+  const server = createApp({ config, db, audit, media, mirror, chain });
 
   server.listen(config.port, config.host, () => {
     console.log(

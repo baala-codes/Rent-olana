@@ -102,8 +102,8 @@ const { listing, signature } = await registerAsset(program, {
   owner: owner.publicKey,
   assetId,
   category: 1,
-  pricePerDay: new BN(10_000_000), // 0.01 SOL/day
-  deposit: new BN(50_000_000),     // 0.05 SOL
+  pricePerDay: new BN(5_000_000),  // 0.005 SOL/day
+  deposit: new BN(10_000_000),     // 0.01 SOL
   maxDays: 30,
   metadataHash,
   signers: [owner],

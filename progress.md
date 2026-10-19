@@ -26,15 +26,15 @@ built, what was verified and with which command, and what is genuinely blocked.
 | Contract drift (IDL ↔ ID ↔ builders) | `npm run contract:check` | Pass: 12 instructions, 3 accounts |
 | Client encoding/decoding/errors | `npm run test:client` | 11 pass, 0 fail |
 | Shared metadata/search contract | `cd shared && npm test` | 12 pass, 0 fail |
-| Backend | `cd backend && npm test` | 20 pass, 0 fail |
+| Backend | `cd backend && npm test` | 25 pass, 0 fail |
 | Backend typecheck | `cd backend && npx tsc --noEmit` | Pass |
 | Portal typecheck + production build | `cd frontend && npm run build` | Pass |
-| Root typecheck + all of the above | `npm run verify` | Pass (43 tests total) |
+| Root typecheck + all of the above | `npm run verify` | Pass (48 tests total) |
 | Backend boots and serves | `curl /health`, `/v1/listings` | 200; admin routes 403 without a token |
 
 Not run in this environment: `cargo test`, `anchor build`, and the localnet
 acceptance suite. The sandbox has no Rust/Solana/Anchor toolchain, so the
-program's own 7 unit tests and the 15-case localnet suite were **not**
+program's own 10 unit tests and the 15-case localnet suite were **not**
 independently re-run here. Treat their status as "reported green previously,
 needs one run on a toolchain host".
 
@@ -73,23 +73,33 @@ needs one run on a toolchain host".
    should use CSS Modules beside the component.
 7. **Backend and shared contract built.** See `backend/README.md` and
    `shared/README.md`. The backend does finalized-only reads, never handles keys,
-   and never decides fund movement.
+   and never decides fund movement. Terminal rental transitions can be posted to
+   an operator webhook (`NOTIFY_WEBHOOK_URL`); delivery is best-effort and never
+   blocks `sync()`.
+8. **Portal uses the backend when available.** Discovery, metadata, and media
+   come from `/v1/listings` and `/v1/rentals`; direct RPC reads remain the
+   fallback. The market gained latitude/longitude/radius search and the booking
+   form gained a 28-day availability calendar driven by `busy_until`. Owner
+   metadata and media writes are wallet-signed against a fresh finalized read.
+9. **Payout hardening.** `settle_rental` payees are bound to the stored rental
+   parties, and the two settlement gates are a pure, unit-tested rule.
 
 ## Deliberately out of scope
 
-- **Docker/infrastructure packaging.** The project runs from source; no
-  Dockerfiles, compose file, or systemd units are included.
-- **Portal → backend integration.** The portal still discovers listings through
-  `getProgramAccounts` and keeps metadata in `localStorage`. The backend exposes
-  the search/metadata/media endpoints it needs; wiring the portal to them is the
-  next product step, not a missing backend capability.
+- **Systemd/cloud deployment.** Dockerfiles and a compose file are included for
+  local packaging; no systemd units, Kubernetes manifests, or managed-cloud
+  deployment are part of the POC.
+- **Event-subscription indexing.** The backend mirrors finalized accounts on a
+  poll/reconcile loop. It does not keep a live program-log subscription; the
+  chain accounts remain the authoritative source.
 
 ## Real blockers and open items
 
 1. **Devnet SOL.** Deploying and running the devnet acceptance suite still needs a
-   funded wallet set. The public faucet is exhausted for the author's IP; fund
-   `admin` with roughly 25 SOL (or ~3 SOL plus per-wallet funding and lower the
-   suite's `fund()` amounts) and run:
+   funded wallet set. The public faucet is exhausted for the author's IP. The
+   suite now funds each role wallet with **0.05 SOL** (`fund()`), so the tests
+   themselves need only ~0.2 SOL; fund `admin` with whatever the faucet gives
+   (up to 1 SOL) plus enough for deployment rent, then run:
    ```bash
    bash scripts/anchor.sh deploy --provider.cluster devnet
    bash scripts/anchor.sh test --provider.cluster devnet
@@ -115,6 +125,8 @@ npm run typecheck
 
 cd shared  && npm install && npm test
 cd backend && npm install && npm test && npm start   # http://127.0.0.1:8787
+# with the backend running, prime the index once:
+curl -X POST -H "x-admin-token: dev-only-token" http://127.0.0.1:8787/v1/admin/sync
 cd frontend && npm install && npm run build
 
 # with a funded devnet wallet:

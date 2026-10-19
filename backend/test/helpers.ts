@@ -210,7 +210,7 @@ export async function startTestApp(
   const media = new MediaStore(config.mediaDir, db);
   const chain = new FakeChain();
   const mirror = new MirrorService(db, chain, audit);
-  const server: Server = createApp({ config, db, audit, media, mirror });
+  const server: Server = createApp({ config, db, audit, media, mirror, chain });
 
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();

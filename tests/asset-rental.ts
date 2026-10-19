@@ -27,7 +27,7 @@ import {
   updateAsset,
   setListingStatus,
   closeListing,
-  createRental,
+  createRental as createRentalOnChain,
   settleRental,
   cancelRental,
   raiseDispute,
@@ -133,7 +133,28 @@ const START_EXTRA = Number(process.env.START_EXTRA ?? 2);
  * lead. Retrying is safe: the failed `init` created no rental account and the
  * same `rental_id` is reused, so no second escrow can be taken.
  */
-const BOOK_LEAD_SECONDS = Number(process.env.BOOK_LEAD_SECONDS ?? 5);
+// On a finalized-commitment test run a 5s lead routinely loses the clock race
+// because the transaction can land ~15s later. Start with enough lead for the
+// booking to be valid on the first attempt; StartInPast still retries safely.
+const BOOK_LEAD_SECONDS = Number(process.env.BOOK_LEAD_SECONDS ?? 20);
+
+/**
+ * Every rental created by the suite, keyed by address, with the wallet that
+ * funded it. A rental account keeps its rent-exempt balance after it reaches a
+ * terminal state, so a 0.05 SOL budget would be consumed by account rent alone
+ * across the cases and the 20-iteration fuzz loop. `afterEach` closes terminal
+ * rentals to return that rent to the renter before the next case starts.
+ */
+const trackedRentals = new Map<string, PublicKey>();
+
+/** Wrap the client builder so every successfully created rental is tracked. */
+async function createRental(
+  ...args: Parameters<typeof createRentalOnChain>
+): ReturnType<typeof createRentalOnChain> {
+  const result = await createRentalOnChain(...args);
+  trackedRentals.set(result.rental.toBase58(), args[1].renter);
+  return result;
+}
 
 async function bookStartingSoon(
   listing: PublicKey,
@@ -154,7 +175,13 @@ async function bookStartingSoon(
       });
       return { signature, startTs };
     } catch (error) {
-      if (programErrorCode(error) !== RENTAL_ERROR_CODE.StartInPast) throw error;
+      if (programErrorCode(error) !== RENTAL_ERROR_CODE.StartInPast) {
+        const failure = parseProgramError(error);
+        console.warn(
+          `  booking failed before start (code=${failure.code ?? "?"}, name=${failure.name ?? "?"}): ${failure.message}`
+        );
+        throw error;
+      }
       console.warn(`  booking start_ts lost the clock race; retrying with lead=${lead * 2}s`);
       lead = Math.max(lead * 2, 10);
     }
@@ -179,7 +206,7 @@ const feeOf = async (signature: TransactionSignature): Promise<number> => {
 const balance = (pubkey: PublicKey): Promise<number> =>
   connection.getBalance(pubkey, "finalized");
 
-async function fund(to: PublicKey, sol = 5): Promise<void> {
+async function fund(to: PublicKey, sol = 0.05): Promise<void> {
   const tx = new anchor.web3.Transaction().add(
     SystemProgram.transfer({
       fromPubkey: admin.publicKey,
@@ -298,14 +325,40 @@ const statusCode = (status: unknown): number => {
   return (RENTAL_STATUS as Record<string, number>)[pascal];
 };
 
+/**
+ * Reclaim rent from every terminal rental this case left behind. This runs after
+ * the fixture snapshot is written, so fixtures still show the terminal account;
+ * it only affects the wallet budget for the next case.
+ */
+afterEach(async () => {
+  for (const [address, renterWallet] of trackedRentals) {
+    const rental = new PublicKey(address);
+    if (!(await connection.getAccountInfo(rental, "finalized"))) continue;
+
+    const r = await program.account.rentalAgreement.fetch(rental);
+    const code = statusCode(r.status);
+    const terminal =
+      code === RENTAL_STATUS.Completed ||
+      code === RENTAL_STATUS.Cancelled ||
+      code === RENTAL_STATUS.Resolved;
+    if (!terminal) continue;
+
+    await closeRental(program, { rental, renterWallet });
+  }
+  trackedRentals.clear();
+});
+
 // ---------------------------------------------------------------------------
 // Fixtures used across cases
 // ---------------------------------------------------------------------------
 
-const L1_PRICE = 10_000_000;
-const L1_DEPOSIT = 50_000_000;
+// Demo-day sizing: each role wallet is funded with 0.05 SOL, so the tests must
+// fit inside that budget. L1's most expensive case is a 3-day booking:
+// 3 * 0.005 SOL price + 0.01 SOL deposit = 0.025 SOL, leaving headroom for fees.
+const L1_PRICE = 5_000_000; // 0.005 SOL/day
+const L1_DEPOSIT = 10_000_000; // 0.01 SOL
 const L1_MAX_DAYS = 30;
-const L2_PRICE = 5_000_000;
+const L2_PRICE = 2_500_000; // 0.0025 SOL/day
 const L2_DEPOSIT = 0;
 const L2_MAX_DAYS = 5;
 
@@ -422,6 +475,32 @@ describe("asset-rental", () => {
       renterWallet: renter.publicKey,
       signers: [renter],
     });
+  });
+
+  it("config: non-admin rejected and the fee cap is enforced", async () => {
+    await expectError(
+      () =>
+        setConfig(program, {
+          admin: renter.publicKey, // not config.admin
+          paused: true,
+          signers: [renter],
+        }),
+      "Unauthorized"
+    );
+
+    await expectError(
+      () =>
+        setConfig(program, {
+          admin: admin.publicKey,
+          feeBps: 1_001, // MAX_FEE_BPS is 1_000
+          signers: [admin],
+        }),
+      "FeeTooHigh"
+    );
+
+    const configAccount = await program.account.platformConfig.fetch(config);
+    assert.equal(configAccount.feeBps, 250, "a rejected update changes nothing");
+    assert.equal(configAccount.paused, false);
   });
 
   it("create: escrow is price_total + deposit, watermark and pointer set", async () => {
@@ -1068,6 +1147,10 @@ describe("asset-rental", () => {
             });
             open.delete(rental.toBase58());
           }
+          // Reclaim this rental's rent before the next fuzz iteration; the
+          // 20-iteration loop would otherwise exhaust a 0.05 SOL renter.
+          await closeRental(program, { rental, renterWallet: renter.publicKey });
+          trackedRentals.delete(rental.toBase58());
         }
         continue;
       }
@@ -1100,6 +1183,10 @@ describe("asset-rental", () => {
       const refunded = before - (await balance(rental));
       assert.equal(refunded, escrowIn.get(rental.toBase58()));
       open.delete(listingKey);
+
+      // Reclaim rent immediately so the next iteration reuses the same 0.05 SOL.
+      await closeRental(program, { rental, renterWallet: renter.publicKey });
+      trackedRentals.delete(rental.toBase58());
     }
 
     assert.equal(open.size, 0, "every rental reached a terminal state");

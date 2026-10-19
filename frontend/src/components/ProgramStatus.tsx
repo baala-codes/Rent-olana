@@ -5,7 +5,7 @@ import { Card } from "./ui";
 
 /** Platform config + market counters, read live from devnet. */
 export function ProgramStatus() {
-  const { config, listings, rentals, metadata } = useProgram();
+  const { config, listings, rentals, metadata, source } = useProgram();
 
   const openRentals = rentals.filter((r) => r.status === "Reserved" || r.status === "Active").length;
   const disputed = rentals.filter((r) => r.status === "Disputed").length;
@@ -62,14 +62,17 @@ export function ProgramStatus() {
               <td>
                 {Object.keys(metadata).length}
                 <span className="muted small"> for {listings.length} listings</span>
+                <span className="badge muted" style={{ marginLeft: 6 }}>
+                  {source === "backend" ? "shared index" : "this browser"}
+                </span>
               </td>
             </tr>
           </tbody>
         </table>
         <p className="muted small" style={{ marginBottom: 0 }}>
           Only a <code>metadata_hash</code> and a category code are stored on-chain. Names, photos,
-          and location are off-chain documents kept in this browser and matched to listings by that
-          hash.
+          and location are off-chain documents from the backend index, matched to listings by that
+          hash; the browser copy is the fallback when the backend is offline.
         </p>
       </Card>
 

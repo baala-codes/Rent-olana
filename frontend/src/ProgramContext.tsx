@@ -22,6 +22,13 @@ import {
 import { parseProgramError } from "@rental-client/wire";
 import { sendInstructions } from "./solana/tx";
 import { getMetadataMany, hashToHex, type AssetMetadata } from "./metadata/store";
+import {
+  backendEnabled,
+  fetchSnapshot,
+  searchListings as searchBackend,
+  type ListingSearchResult,
+} from "./api/client";
+import type { SearchQuery } from "@shared";
 
 interface ProgramValue {
   connection: Connection;
@@ -30,9 +37,14 @@ interface ProgramValue {
   rentals: Rental[];
   /** Off-chain metadata known to this browser, keyed by hex metadata hash. */
   metadata: Record<string, AssetMetadata>;
+  /** Where the last successful read came from. */
+  source: "backend" | "rpc";
+  backendAvailable: boolean;
   loading: boolean;
   error: string | null;
   refreshedAt: number | null;
+  /** Server-side search with geo/availability; null when the backend is offline. */
+  search: (query: SearchQuery) => Promise<ListingSearchResult | null>;
   refresh: () => Promise<void>;
   /** Re-hydrate the metadata map from the currently loaded listings. */
   syncMetadata: () => void;
@@ -58,6 +70,8 @@ export function ProgramProvider({ children }: { children: ReactNode }) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [metadata, setMetadata] = useState<Record<string, AssetMetadata>>({});
+  const [source, setSource] = useState<"backend" | "rpc">("rpc");
+  const [backendAvailable, setBackendAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
@@ -67,26 +81,69 @@ export function ProgramProvider({ children }: { children: ReactNode }) {
   const [lastSignature, setLastSignature] = useState<TransactionSignature | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const readChain = useCallback(async () => {
+    // Sequential, not parallel: the public devnet RPC rate-limits bursts
+    // (HTTP 429), so one request at a time with backoff is far more reliable.
+    const nextConfig = await withRetry(() => fetchConfig(connection));
+    const nextListings = await withRetry(() => fetchListings(connection));
+    const nextRentals = await withRetry(() => fetchRentals(connection));
+    return { config: nextConfig, listings: nextListings, rentals: nextRentals };
+  }, [connection]);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Sequential, not parallel: the public devnet RPC rate-limits bursts
-      // (HTTP 429), so one request at a time with backoff is far more reliable.
-      const nextConfig = await withRetry(() => fetchConfig(connection));
-      const nextListings = await withRetry(() => fetchListings(connection));
-      const nextRentals = await withRetry(() => fetchRentals(connection));
-      setConfig(nextConfig);
-      setListings(nextListings);
-      setRentals(nextRentals);
-      setMetadata(getMetadataMany(hashesOf(nextListings)));
+      // Prefer the backend index (search, geo, shared metadata/media). Fall back
+      // to direct RPC reads when it is unreachable or still empty, so the portal
+      // keeps working as a static bundle.
+      if (backendEnabled) {
+        try {
+          const snapshot = await fetchSnapshot();
+          if (snapshot.listings.length > 0 || snapshot.rentals.length > 0 || snapshot.config) {
+            setConfig(snapshot.config);
+            setListings(snapshot.listings);
+            setRentals(snapshot.rentals);
+            setMetadata({
+              ...snapshot.metadata,
+              ...getMetadataMany(hashesOf(snapshot.listings)),
+            });
+            setSource("backend");
+            setBackendAvailable(true);
+            setRefreshedAt(Date.now());
+            return;
+          }
+        } catch {
+          // Backend down or not mirrored yet: use the chain directly below.
+        }
+      }
+
+      const chain = await readChain();
+      setConfig(chain.config);
+      setListings(chain.listings);
+      setRentals(chain.rentals);
+      setMetadata(getMetadataMany(hashesOf(chain.listings)));
+      setSource("rpc");
+      setBackendAvailable(false);
       setRefreshedAt(Date.now());
     } catch (cause) {
       setError(describeReadError(cause));
     } finally {
       setLoading(false);
     }
-  }, [connection]);
+  }, [readChain]);
+
+  const search = useCallback(async (query: SearchQuery) => {
+    if (!backendEnabled) return null;
+    try {
+      const result = await searchBackend(query);
+      setBackendAvailable(true);
+      return result;
+    } catch {
+      setBackendAvailable(false);
+      return null;
+    }
+  }, []);
 
   // Guard against React StrictMode's double-invoked mount effect, which would
   // otherwise double the traffic against an already rate-limited RPC.
@@ -140,9 +197,12 @@ export function ProgramProvider({ children }: { children: ReactNode }) {
       listings,
       rentals,
       metadata,
+      source,
+      backendAvailable,
       loading,
       error,
       refreshedAt,
+      search,
       refresh,
       syncMetadata,
       run,
@@ -158,9 +218,12 @@ export function ProgramProvider({ children }: { children: ReactNode }) {
       listings,
       rentals,
       metadata,
+      source,
+      backendAvailable,
       loading,
       error,
       refreshedAt,
+      search,
       refresh,
       syncMetadata,
       run,

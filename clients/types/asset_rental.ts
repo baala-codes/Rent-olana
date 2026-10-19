@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/asset_rental.json`.
  */
 export type AssetRental = {
-  "address": "DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ",
+  "address": "Ge4Z9acYsYxSj8UsVo1W3yMroEbonZBUshUW2wGgNaCg",
   "metadata": {
     "name": "assetRental",
     "version": "0.1.0",

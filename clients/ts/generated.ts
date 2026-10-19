@@ -6,7 +6,7 @@
  */
 
 /** Program address published in the IDL. */
-export const IDL_ADDRESS = "DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ";
+export const IDL_ADDRESS = "Ge4Z9acYsYxSj8UsVo1W3yMroEbonZBUshUW2wGgNaCg";
 
 /** Instruction name -> 8-byte discriminator, as hex. */
 export const IDL_INSTRUCTION_DISCRIMINATORS: Readonly<Record<string, string>> = {

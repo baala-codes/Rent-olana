@@ -157,7 +157,7 @@ if the config account already exists it logs the current values and returns.
 Verify:
 
 ```bash
-solana program show DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ --url devnet
+solana program show Ge4Z9acYsYxSj8UsVo1W3yMroEbonZBUshUW2wGgNaCg --url devnet
 ```
 
 The first deploy must happen **before** the IDL accounts for a deployed
@@ -172,7 +172,7 @@ Keep this table current, and add the signature of a real
 | Item | Value |
 | --- | --- |
 | Cluster | `devnet` |
-| Program ID | `DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ` |
+| Program ID | `Ge4Z9acYsYxSj8UsVo1W3yMroEbonZBUshUW2wGgNaCg` |
 | Deployment tx | *(pending — record `anchor deploy` output here)* |
 | `initialize_config` tx | *(pending — record from the migration output)* |
 | register/book/settle tx | *(pending — record from a devnet run)* |
@@ -187,7 +187,7 @@ gitignored):
 | `owner_a` | `8NJHN1kPzbKC7j5HwonjAY65rH5TdWMaevPwiGUEC8Yc` |
 | `owner_b` | `9oQip5maa54t9zVHDHt13mQuWDEQt6ALMb3dBaVg6AsX` |
 | `renter` | `BJicrqS5cSQZzoDUdTJyDdKaUrautBSEWLzbCv2qF5TW` |
-| `program` | `DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ` |
+| `program` | `Ge4Z9acYsYxSj8UsVo1W3yMroEbonZBUshUW2wGgNaCg` |
 
 ## 7. A live devnet fixture
 

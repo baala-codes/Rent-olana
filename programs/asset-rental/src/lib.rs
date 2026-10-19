@@ -62,7 +62,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ");
+declare_id!("Ge4Z9acYsYxSj8UsVo1W3yMroEbonZBUshUW2wGgNaCg");
 
 #[program]
 pub mod asset_rental {

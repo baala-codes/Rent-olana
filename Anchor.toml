@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-asset_rental = "DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ"
+asset_rental = "Ge4Z9acYsYxSj8UsVo1W3yMroEbonZBUshUW2wGgNaCg"
 
 [programs.localnet]
-asset_rental = "DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ"
+asset_rental = "Ge4Z9acYsYxSj8UsVo1W3yMroEbonZBUshUW2wGgNaCg"
 
 [registry]
 url = "https://api.apr.dev"
@@ -20,6 +20,7 @@ wallet = ".keys/admin.json"
 
 [scripts]
 test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/asset-rental.ts"
+migrate = "node migrations/deploy.ts"
 
 [test]
 startup_wait = 5000

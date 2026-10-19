@@ -38,8 +38,11 @@
   /* YC nod, used sparingly */
   --yc: #ff6600;
 
-  --mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    monospace;
   --sans: "Inter", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --display: "Chakra Petch", "Inter", -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
 
   --radius: 8px;
   --radius-sm: 6px;
@@ -63,15 +66,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Ambient Solana glow behind everything. */
+/* Ambient Solana glow plus a faint blueprint grid behind everything. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   background:
+    linear-gradient(rgba(153, 69, 255, 0.035) 1px, transparent 1px) 0 0 / 100% 46px,
+    linear-gradient(90deg, rgba(153, 69, 255, 0.035) 1px, transparent 1px) 0 0 / 46px 100%,
     radial-gradient(900px 500px at 12% -10%, rgba(153, 69, 255, 0.16), transparent 60%),
     radial-gradient(800px 480px at 92% 4%, rgba(20, 241, 149, 0.1), transparent 62%);
+  mask-image: radial-gradient(130% 100% at 50% 0%, #000 55%, transparent 100%);
+  -webkit-mask-image: radial-gradient(130% 100% at 50% 0%, #000 55%, transparent 100%);
   z-index: 0;
 }
 

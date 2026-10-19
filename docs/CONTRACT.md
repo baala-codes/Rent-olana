@@ -11,7 +11,7 @@ backend. Solana remains the source of truth for funds and rental state.
 
 | | |
 | --- | --- |
-| Program ID | `DhbEciuQ2HDMUbQzCRnGWe15cYK9wSav9KgXP42v4DUZ` |
+| Program ID | `Ge4Z9acYsYxSj8UsVo1W3yMroEbonZBUshUW2wGgNaCg` |
 | Cluster | `devnet` (local validator: `localnet`, same program ID) |
 | RPC | `https://api.devnet.solana.com` |
 | Anchor / anchor-lang | `0.30.1` |

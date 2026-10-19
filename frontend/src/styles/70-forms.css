@@ -43,10 +43,11 @@ textarea {
   font-size: 13px;
   padding: 8px 10px;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   background: rgba(0, 0, 0, 0.35);
   color: var(--ink);
   width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 input::placeholder {
@@ -58,7 +59,10 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--purple);
-  box-shadow: var(--glow);
+  box-shadow:
+    0 0 0 1px rgba(153, 69, 255, 0.35),
+    0 0 18px rgba(153, 69, 255, 0.22),
+    0 0 42px rgba(20, 241, 149, 0.1);
 }
 
 input[type="checkbox"] {

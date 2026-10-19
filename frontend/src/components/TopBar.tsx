@@ -12,17 +12,31 @@ const TABS: ReadonlyArray<{ id: Tab; label: string }> = [
   { id: "admin", label: "admin" },
 ];
 
-export function TopBar({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
+export function TopBar({
+  tab,
+  onTab,
+  onHome,
+}: {
+  tab: Tab;
+  onTab: (tab: Tab) => void;
+  onHome?: () => void;
+}) {
   return (
     <header className="topbar">
       <div className="topbar-inner">
-        <div className="brand">
+        <button
+          type="button"
+          className={`brand${onHome ? " home" : ""}`}
+          onClick={onHome}
+          disabled={!onHome}
+          title={onHome ? "Back to landing" : undefined}
+        >
           <span className="brand-mark" aria-hidden>
             ◎
           </span>
           <span className="brand-logo">Rent-olana</span>
           <span className="brand-sub">escrowed asset rentals on Solana</span>
-        </div>
+        </button>
 
         <nav className="nav">
           {TABS.map(({ id, label }) => (

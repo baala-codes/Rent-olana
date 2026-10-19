@@ -35,7 +35,6 @@ export function TopBar({
             ◎
           </span>
           <span className="brand-logo">Rent-olana</span>
-          <span className="brand-sub">escrowed asset rentals on Solana</span>
         </button>
 
         <nav className="nav">

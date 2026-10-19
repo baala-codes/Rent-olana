@@ -104,10 +104,11 @@ export function ProgramProvider({ children }: { children: ReactNode }) {
             setConfig(snapshot.config);
             setListings(snapshot.listings);
             setRentals(snapshot.rentals);
-            setMetadata({
+            setMetadata((previous) => ({
+              ...previous,
               ...snapshot.metadata,
               ...getMetadataMany(hashesOf(snapshot.listings)),
-            });
+            }));
             setSource("backend");
             setBackendAvailable(true);
             setRefreshedAt(Date.now());
@@ -122,7 +123,12 @@ export function ProgramProvider({ children }: { children: ReactNode }) {
       setConfig(chain.config);
       setListings(chain.listings);
       setRentals(chain.rentals);
-      setMetadata(getMetadataMany(hashesOf(chain.listings)));
+      // Keep documents already loaded from the backend: an RPC fallback must
+      // not make shared names and photos disappear from this session.
+      setMetadata((previous) => ({
+        ...previous,
+        ...getMetadataMany(hashesOf(chain.listings)),
+      }));
       setSource("rpc");
       setBackendAvailable(false);
       setRefreshedAt(Date.now());
@@ -137,6 +143,9 @@ export function ProgramProvider({ children }: { children: ReactNode }) {
     if (!backendEnabled) return null;
     try {
       const result = await searchBackend(query);
+      // A search can surface a listing (and its document) that was published
+      // after this tab's snapshot; merge rather than making the caller wait.
+      setMetadata((previous) => ({ ...previous, ...result.metadata }));
       setBackendAvailable(true);
       return result;
     } catch {
@@ -155,7 +164,12 @@ export function ProgramProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const syncMetadata = useCallback(() => {
-    setMetadata(getMetadataMany(hashesOf(listings)));
+    // Merge the browser's copy over the shared map instead of replacing it;
+    // otherwise one local save would hide every backend document in the tab.
+    setMetadata((previous) => ({
+      ...previous,
+      ...getMetadataMany(hashesOf(listings)),
+    }));
   }, [listings]);
 
   const run = useCallback<ProgramValue["run"]>(

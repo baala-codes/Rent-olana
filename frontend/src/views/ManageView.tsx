@@ -192,6 +192,14 @@ function RegisterForm() {
           }. It remains available in this browser.`
         );
       }
+    } else if (signature && !backendEnabled) {
+      setLocalError(
+        "Listing is live, but the shared metadata index is disabled (VITE_API_URL=off). Only this browser can see the name and photo."
+      );
+    } else if (signature && !signMessage) {
+      setLocalError(
+        "Listing is live, but this wallet cannot sign messages, so the name and photo were not published. They stay in this browser."
+      );
     }
   };
 
@@ -281,12 +289,22 @@ function ManageRow({
   listing: Listing;
   onSelect: (address: PublicKey) => void;
 }) {
-  const { run, busy, syncMetadata, metadata } = useProgram();
+  const {
+    run,
+    busy,
+    syncMetadata,
+    metadata,
+    source,
+    backendAvailable,
+    refresh,
+  } = useProgram();
   const { publicKey, signMessage } = useWallet();
   const [editingTerms, setEditingTerms] = useState(false);
   const [editingMeta, setEditingMeta] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState(false);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   const [priceSol, setPriceSol] = useState(lamportsToSol(listing.pricePerDay));
@@ -296,7 +314,13 @@ function ManageRow({
 
   const currentHash = hashToHex(listing.metadataHash);
   // Prefer this browser's copy, then the shared backend document.
-  const existing = getMetadata(currentHash) ?? metadata[currentHash];
+  const localDoc = getMetadata(currentHash);
+  const sharedDoc = metadata[currentHash];
+  const existing = localDoc ?? sharedDoc;
+  // Only claim the shared copy is missing when the backend snapshot actually
+  // succeeded; an RPC fallback says nothing about what the backend holds.
+  const sharedMissing =
+    !published && backendAvailable && source === "backend" && !!localDoc && !sharedDoc;
   const [name, setName] = useState(existing?.name ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
   const [imageUrl, setImageUrl] = useState(existing?.images?.[0] ?? "");
@@ -358,6 +382,42 @@ function ManageRow({
           }. The document is still in this browser.`
         );
       }
+    } else if (signature && !backendEnabled) {
+      setMetaError(
+        "The on-chain hash was updated, but the shared index is disabled (VITE_API_URL=off). Renters will not see this document."
+      );
+    } else if (signature && (!publicKey || !signMessage)) {
+      setMetaError(
+        "The on-chain hash was updated, but this wallet cannot sign messages, so the document was not published. Renters will not see it."
+      );
+    }
+  };
+
+  /** Re-publish a browser-local document the shared index lost (e.g. a wiped DB). */
+  const publishShared = async () => {
+    setMetaError(null);
+    setUploadNotice(null);
+    if (!localDoc) return;
+    if (!publicKey || !signMessage) {
+      setMetaError("Connect a wallet that supports message signing to publish metadata.");
+      return;
+    }
+    setPublishing(true);
+    try {
+      await putMetadata(listing.address.toBase58(), localDoc, { publicKey, signMessage });
+      setPublished(true);
+      setUploadNotice(
+        "Document published to the shared index. Renters can now see the name and photo."
+      );
+      await refresh();
+    } catch (cause) {
+      setMetaError(
+        `Publishing to the shared index failed: ${
+          cause instanceof Error ? cause.message : String(cause)
+        }`
+      );
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -411,6 +471,24 @@ function ManageRow({
           {rented && <span className="badge open">rented</span>}
           {!existing && <span className="badge muted">no off-chain doc</span>}
         </div>
+
+        {sharedMissing && (
+          <Notice kind="error" title="Shared copy missing">
+            This browser has the listing document, but the backend does not, so
+            renters on other browsers see no name or photo. Publishing it does
+            not change the on-chain hash.
+            <div className="btn-row" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn primary tiny"
+                disabled={publishing || !!busy}
+                onClick={() => void publishShared()}
+              >
+                {publishing ? "publishing…" : "publish metadata"}
+              </button>
+            </div>
+          </Notice>
+        )}
 
         {metaError && (
           <Notice kind="error" title="Metadata not saved">

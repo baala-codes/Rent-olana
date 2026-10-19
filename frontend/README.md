@@ -97,6 +97,11 @@ off-chain, and the portal implements that half faithfully:
   detail views look up listings by hash and show the name, description, photo,
   and location when the document is known, falling back to the category label
   otherwise.
+- `localStorage` is **per browser**. The owner's copy is not visible to a renter;
+  the backend is the shared copy (`GET /v1/listings` returns `metadata` and
+  `media`). If the backend is offline, empty, or not configured for the renter,
+  only the owner sees the name and photo. See the root
+  [`docs/MEDIA.md`](../docs/MEDIA.md) and [`docs/DEPLOY-VERCEL.md`](../docs/DEPLOY-VERCEL.md).
 - Editing metadata always succeeds (only `metadata_hash` changes), even while a
   rental is open — matching the contract, where the hash and category are the
   two always-mutable fields.
@@ -130,6 +135,18 @@ src/
   styles/                 base tokens, then one file per UI area
 ```
 
+## Deploy on Vercel
+
+The repository root has [`vercel.json`](../vercel.json), which builds this app to
+`frontend/dist` and rewrites routes to `index.html`.
+
+1. Import the repository and keep the **Root Directory** at the repo root.
+2. Set `VITE_API_URL` to the backend's public URL (see [`.env.example`](.env.example)).
+3. Deploy. The variable is baked in at build time, so redeploy after changing it.
+
+The backend needs a persistent volume and cannot run on Vercel's stateless
+functions as-is. Full steps: [`docs/DEPLOY-VERCEL.md`](../docs/DEPLOY-VERCEL.md).
+
 ## Verified
 
 - `npm run build` (tsc `--noEmit` + `vite build`) passes.
@@ -141,9 +158,8 @@ src/
 
 ## Limitations
 
-- **The program is not deployed yet**, so live reads return zero accounts and
-  every list shows an empty state. The portal is wired for a deployed program and
-  will populate the moment one exists.
+- The program is deployed on **devnet** (`Ge4Z…`). Set `VITE_API_URL` to a
+  reachable backend, otherwise renter-side names and photos are unavailable.
 - Backend search only sees rows that have been mirrored. Run a sync after a
   listing is registered (or set `SYNC_INTERVAL_MS`) before expecting the shared
   index to show it; chain reads remain the fallback.

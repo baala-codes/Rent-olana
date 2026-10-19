@@ -65,7 +65,7 @@ async function recoverSimulationLogs(
     const transaction = await builder.transaction();
     // `builder.transaction()` leaves the fee payer unset until `rpc()` fills it
     // from the provider, so set it before compiling the simulation message.
-    transaction.feePayer ??= program.provider.wallet.publicKey;
+    transaction.feePayer ??= program.provider.publicKey;
     // The failed send already registered this exact signature with the RPC, and
     // re-simulating it returns `AlreadyProcessed` with no logs. A fresh
     // blockhash and an empty signature list make the simulation message unique.

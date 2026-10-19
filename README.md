@@ -38,6 +38,9 @@ The authoritative design and build plan live alongside this repository:
 | [`scripts/`](scripts/) | Toolchain install, keypair generation, client export, diagram rendering. |
 | [`fixtures/`](fixtures/) | Committed, non-secret on-chain fixtures produced by the test suite. |
 | [`tests/`](tests/) | Cross-component acceptance suite and fixture generation. |
+| [`vercel.json`](vercel.json) | Vercel build for the portal (`frontend/dist`). |
+| [`security.json`](security.json) | Canonical security.txt payload for the program metadata account. |
+| [`SECURITY.md`](SECURITY.md) | Responsible-disclosure policy. |
 
 The Anchor workspace root is this directory: `Anchor.toml`, `Cargo.toml`,
 `tests/`, and `migrations/` all live here, and `programs/asset-rental` is the
@@ -140,6 +143,23 @@ The backend mirrors **finalized** chain state into SQLite and serves search,
 metadata, media, and order history. It never decides fund movement. See
 [`backend/README.md`](backend/README.md) for the API and the wallet-signature
 scheme; the portal/backend payloads live in [`shared/`](shared/).
+
+## Deploying
+
+| Piece | Where | Guide |
+| --- | --- | --- |
+| Portal | Vercel | [`docs/DEPLOY-VERCEL.md`](docs/DEPLOY-VERCEL.md) |
+| Backend | Any host with a persistent `/data` volume (Render, Fly, Railway, VPS) | [`backend/README.md`](backend/README.md) |
+| Program | Devnet `Ge4Z…` | [`docs/SETUP.md`](docs/SETUP.md) |
+
+Set `VITE_API_URL` in Vercel to the backend's public URL. Without it the portal
+still reads Solana, but shared names and photos are unavailable.
+
+Program verification and security.txt are covered in
+[`docs/VERIFY.md`](docs/VERIFY.md). Note that OtterSec's remote verification is
+mainnet-only, so the Explorer verified badge cannot be completed for the current
+devnet deployment. Media storage costs and options are in
+[`docs/MEDIA.md`](docs/MEDIA.md).
 
 ## Wallet roles
 

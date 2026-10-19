@@ -419,6 +419,210 @@
   height: 48%;
 }
 
+/* ---------------------------------------------------------- architecture */
+
+.architecture {
+  position: relative;
+  z-index: 1;
+  max-width: 1240px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 26px 22px 8px;
+}
+
+.sectionLead {
+  max-width: 82ch;
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.archFlow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr) 56px minmax(0, 1.12fr);
+  align-items: stretch;
+}
+
+.archNode {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 15px 16px 14px;
+  border: 1px solid rgba(153, 69, 255, 0.24);
+  background: rgba(12, 7, 24, 0.7);
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+
+.archNode h3 {
+  margin: 0 0 6px;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.archNode p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.nodeTag {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--purple);
+}
+
+.nodeCore {
+  border-color: rgba(20, 241, 149, 0.5);
+  background: linear-gradient(180deg, rgba(20, 241, 149, 0.09), rgba(12, 7, 24, 0.78));
+  box-shadow: 0 0 30px rgba(20, 241, 149, 0.12);
+}
+
+.nodeCore .nodeTag {
+  color: var(--green);
+}
+
+.nodeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nodeList li {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.nodeList li::before {
+  content: "▸ ";
+  color: rgba(20, 241, 149, 0.65);
+}
+
+.archLink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 4px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--faint);
+}
+
+.archLink i {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(153, 69, 255, 0.2), rgba(20, 241, 149, 0.65));
+}
+
+.archLink i::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: -1px;
+  border-left: 5px solid rgba(20, 241, 149, 0.75);
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+}
+
+.mirrorRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 10px;
+  padding: 11px 14px;
+  border: 1px dashed rgba(20, 241, 149, 0.26);
+  background: rgba(20, 241, 149, 0.035);
+}
+
+.mirrorTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+.mirrorTitle b {
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: #fff;
+}
+
+.mirrorRow p {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.mirrorTag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--faint);
+}
+
+@media (max-width: 980px) {
+  .archFlow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .archLink {
+    padding: 9px 0;
+  }
+
+  .archLink i {
+    width: 1px;
+    height: 20px;
+    background: linear-gradient(180deg, rgba(153, 69, 255, 0.2), rgba(20, 241, 149, 0.65));
+  }
+
+  .archLink i::after {
+    top: auto;
+    right: auto;
+    bottom: -1px;
+    left: -3.5px;
+    border-top: 5px solid rgba(20, 241, 149, 0.75);
+    border-right: 3.5px solid transparent;
+    border-bottom: 0;
+    border-left: 3.5px solid transparent;
+  }
+
+  .mirrorRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* -------------------------------------------------------------- features */
 
 .features {
@@ -493,6 +697,74 @@
   font-size: 12.5px;
   line-height: 1.55;
   color: var(--ink-soft);
+}
+
+.featuresHead {
+  grid-column: 1 / -1;
+}
+
+.featuresHead .sectionLead {
+  margin-bottom: 0;
+}
+
+.verifyBar {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 26px;
+  margin-top: 2px;
+  padding: 13px 16px;
+  border: 1px solid rgba(20, 241, 149, 0.22);
+  background: rgba(20, 241, 149, 0.045);
+}
+
+.verifyItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.verifyItem span {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.verifyItem b,
+.verifyItem a {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #fff;
+}
+
+.verifyItem a {
+  color: var(--green);
+  word-break: break-all;
+}
+
+.verifySpacer {
+  flex: 1;
+}
+
+.verifyCta {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--green);
+  border-bottom: 1px dashed rgba(20, 241, 149, 0.45);
+}
+
+.verifyCta:hover {
+  text-decoration: none;
+  border-bottom-style: solid;
 }
 
 /* --------------------------------------------------------- how it works */

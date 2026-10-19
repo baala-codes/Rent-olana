@@ -25,7 +25,19 @@ import type {
 const RAW_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
 const DISABLED = RAW_BASE === "off" || RAW_BASE === "false";
 
-export const apiBase = DISABLED ? null : (RAW_BASE || "http://127.0.0.1:8787").replace(/\/$/, "");
+/**
+ * Default to the host that served the portal, not loopback.
+ *
+ * `127.0.0.1` only works for a browser on the backend machine. Using the page
+ * hostname means a renter opening the portal over the LAN reaches the same
+ * backend automatically; a deployed portal still sets `VITE_API_URL`.
+ */
+const DEFAULT_API =
+  typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.hostname}:8787`
+    : "http://127.0.0.1:8787";
+
+export const apiBase = DISABLED ? null : (RAW_BASE || DEFAULT_API).replace(/\/$/, "");
 export const backendEnabled = apiBase !== null;
 
 export class BackendError extends Error {
@@ -55,6 +67,8 @@ export interface ListingSearchResult {
   listings: Listing[];
   total: number;
   query: NormalizedSearchQuery;
+  /** Off-chain documents returned alongside the matching listings. */
+  metadata: Record<string, AssetMetadata>;
 }
 
 // ------------------------------------------------------------------ helpers
@@ -95,10 +109,20 @@ async function digestHex(bytes: Uint8Array): Promise<string> {
   return bytesToHex(new Uint8Array(digest));
 }
 
-/** Absolute media URL: the backend stores relative `/media/...` paths. */
+/**
+ * Absolute media URL for the backend this client is configured to use.
+ *
+ * Relative `/media/...` paths are the normal shape. Older documents committed
+ * the upload host verbatim — often `http://127.0.0.1:8787/media/...` — which
+ * breaks for every other browser. Those loopback URLs are rewritten onto the
+ * current backend instead of being returned as-is.
+ */
 export function resolveMediaUrl(url: string): string {
-  if (!url.startsWith("/") || !apiBase) return url;
-  return `${apiBase}${url}`;
+  if (!apiBase || !url) return url;
+  if (url.startsWith("/")) return `${apiBase}${url}`;
+  if (url.startsWith(`${apiBase}/media/`)) return url;
+  const loopback = url.match(/^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?(\/media\/.*)$/i);
+  return loopback ? `${apiBase}${loopback[1]}` : url;
 }
 
 export function dtoToListing(dto: ListingDTO): Listing {
@@ -141,12 +165,14 @@ function metadataFromDto(dto: ListingDTO): AssetMetadata | null {
   if (!dto.metadata) return null;
   const document: MetadataDocument = {
     ...dto.metadata,
-    // Prefer the backend's content-addressed media when the document has no
-    // image URLs of its own.
-    images:
+    // Prefer the document's own image URLs; fall back to the backend's
+    // content-addressed media. Resolve both, so a host-local URL committed by
+    // an older upload still renders for a renter on another machine.
+    images: (
       dto.metadata.images.length > 0
         ? dto.metadata.images
-        : dto.media.map((asset) => resolveMediaUrl(asset.url)),
+        : dto.media.map((asset) => asset.url)
+    ).map(resolveMediaUrl),
   };
   return {
     ...document,
@@ -235,10 +261,20 @@ export async function searchListings(query: SearchQuery): Promise<ListingSearchR
     total: number;
     query: NormalizedSearchQuery;
   }>(`/v1/listings?${params.toString()}`);
+
+  // Search rows carry their documents too. Return them with the result so the
+  // portal can render names/photos for listings it has not snapshotted yet.
+  const metadata: Record<string, AssetMetadata> = {};
+  for (const dto of body.results) {
+    const document = metadataFromDto(dto);
+    if (document) metadata[document.metadataHash] = document;
+  }
+
   return {
     listings: body.results.map(dtoToListing),
     total: body.total,
     query: body.query,
+    metadata,
   };
 }
 

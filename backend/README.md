@@ -8,7 +8,10 @@ metadata, media, order history, audit).
 
 - **Runtime:** Node 22.18+ (runs the TypeScript sources directly through `tsx`).
 - **Storage:** SQLite via the built-in `node:sqlite` module — no native build.
-  The mirror is disposable and can be rebuilt from chain state at any time.
+  The on-chain rows are disposable and can be rebuilt from chain state at any
+  time. **Metadata and uploaded media are not on chain:** back up `DB_PATH` and
+  `MEDIA_DIR`, because deleting them loses documents and photos permanently.
+  The owner's browser keeps a local copy, but renters cannot see it.
 - **Chain client:** `clients/ts/wire.ts` — the same codec, discriminators and
   account decoders the portal uses.
 - **HTTP:** Node's built-in server, no framework.

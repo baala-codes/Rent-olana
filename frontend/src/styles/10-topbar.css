@@ -72,12 +72,6 @@ button.brand:disabled {
   padding: 0;
 }
 
-.brand-sub {
-  font-size: 11px;
-  color: var(--muted);
-  letter-spacing: 0.02em;
-}
-
 .nav {
   display: flex;
   align-items: center;

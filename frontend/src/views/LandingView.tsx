@@ -149,7 +149,93 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
         </div>
       </section>
 
+      <section className={styles.architecture}>
+        <h2 className={styles.sectionHead}>system architecture</h2>
+        <p className={styles.sectionLead}>
+          The program is the source of truth for listings, rentals and escrowed
+          SOL. The portal and the backend are clients: they can read, propose
+          and display, but only the program can move funds.
+        </p>
+
+        <div className={styles.archFlow}>
+          <article className={styles.archNode}>
+            <span className={styles.nodeTag}>01 / client</span>
+            <h3>portal + wallet</h3>
+            <p>
+              React portal in the browser. Phantom or Solflare signs every
+              state-changing transaction; keys never leave the wallet.
+            </p>
+            <ul className={styles.nodeList}>
+              <li>books</li>
+              <li>settles</li>
+              <li>disputes</li>
+            </ul>
+          </article>
+
+          <div className={styles.archLink} aria-hidden>
+            <span>signs txs</span>
+            <i />
+          </div>
+
+          <article className={styles.archNode}>
+            <span className={styles.nodeTag}>02 / network</span>
+            <h3>Solana RPC</h3>
+            <p>
+              Submits signed transactions and serves account reads. A write
+              counts only once the cluster finalizes it.
+            </p>
+            <ul className={styles.nodeList}>
+              <li>devnet</li>
+              <li>finalized reads</li>
+            </ul>
+          </article>
+
+          <div className={styles.archLink} aria-hidden>
+            <span>validates</span>
+            <i />
+          </div>
+
+          <article className={`${styles.archNode} ${styles.nodeCore}`}>
+            <span className={styles.nodeTag}>03 / source of truth</span>
+            <h3>on-chain program</h3>
+            <p>
+              Owns the three accounts, validates every transition, and holds
+              renter SOL in escrow until settlement, cancellation or
+              resolution.
+            </p>
+            <ul className={styles.nodeList}>
+              <li>3 accounts</li>
+              <li>12 instructions</li>
+              <li>escrow</li>
+            </ul>
+          </article>
+        </div>
+
+        <div className={styles.mirrorRow}>
+          <div>
+            <div className={styles.mirrorTitle}>
+              <b>backend mirror</b>
+              <span>search · metadata · media · audit</span>
+            </div>
+            <p>
+              Reads the same finalized accounts into a disposable SQLite index.
+              It never holds keys, never signs, and never decides fund movement.
+            </p>
+          </div>
+          <span className={styles.mirrorTag}>read-only replica</span>
+        </div>
+
+      </section>
+
       <section className={styles.features}>
+        <div className={styles.featuresHead}>
+          <h2 className={styles.sectionHead}>trust, verifiable</h2>
+          <p className={styles.sectionLead}>
+            Every guarantee below is enforced by the program and readable on
+            chain. None of it depends on the operator behaving well.
+          </p>
+        </div>
+
         <div className={styles.feature}>
           <span className={styles.featureKey}>escrow by program</span>
           <p>
@@ -165,11 +251,66 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
           </p>
         </div>
         <div className={styles.feature}>
+          <span className={styles.featureKey}>deposit protected</span>
+          <p>
+            The deposit is escrowed with the price and returned in full on
+            settlement; a pre-start cancellation refunds everything.
+          </p>
+        </div>
+        <div className={styles.feature}>
+          <span className={styles.featureKey}>deterministic splits</span>
+          <p>
+            Price minus fee to the owner, fee to the treasury, deposit to the
+            renter — computed on chain, to the lamport.
+          </p>
+        </div>
+        <div className={styles.feature}>
           <span className={styles.featureKey}>verified mirror</span>
           <p>
-            The backend mirrors finalized state only — it indexes what it can
-            verify on chain and never touches keys.
+            The backend indexes finalized state only — it never holds keys and
+            never decides fund movement.
           </p>
+        </div>
+        <div className={styles.feature}>
+          <span className={styles.featureKey}>disputes freeze funds</span>
+          <p>
+            A dispute blocks settle and cancel until an admin split resolves it
+            between the owner and the renter.
+          </p>
+        </div>
+
+        <div className={styles.verifyBar}>
+          <div className={styles.verifyItem}>
+            <span>program id</span>
+            <a
+              href={explorerUrl(`address/${PROGRAM_ID.toBase58()}`)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {PROGRAM_ID.toBase58()}
+            </a>
+          </div>
+          <div className={styles.verifyItem}>
+            <span>fee</span>
+            <b>2.5% · capped at 10%</b>
+          </div>
+          <div className={styles.verifyItem}>
+            <span>late settlement</span>
+            <b>anyone after end + 24h</b>
+          </div>
+          <div className={styles.verifyItem}>
+            <span>escrow exits</span>
+            <b>3 · no sweep</b>
+          </div>
+          <span className={styles.verifySpacer} aria-hidden />
+          <a
+            className={styles.verifyCta}
+            href={explorerUrl(`address/${PROGRAM_ID.toBase58()}`)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            inspect the program ↗
+          </a>
         </div>
       </section>
 

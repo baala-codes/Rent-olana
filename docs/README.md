@@ -13,6 +13,9 @@ design and build plan live at the repository root:
 | [`CONTRACT.md`](CONTRACT.md) | Frozen on-chain interface: program ID, account byte-offset tables, PDA seed byte tables, instruction table with discriminators and account lists, error table, and read-side rules for the backend mirror. |
 | [`EXAMPLES.md`](EXAMPLES.md) | One worked example per instruction, with the exact ordered account list and the on-chain result. |
 | [`SETUP.md`](SETUP.md) | Toolchain, wallet bootstrap, the program-ID drift check, deploy steps, and backend startup. |
+| [`DEPLOY-VERCEL.md`](DEPLOY-VERCEL.md) | Portal deployment on Vercel, `VITE_API_URL`, and the persistent backend requirement. |
+| [`VERIFY.md`](VERIFY.md) | Reproducible builds, the Explorer verified badge, and the on-chain security.txt account. |
+| [`MEDIA.md`](MEDIA.md) | On-chain image costs and the recommended off-chain media options. |
 | [`diagrams/`](diagrams/) | PlantUML diagram sources and rendered SVGs, with [rendering instructions](diagrams/README.md). |
 
 ## How the pieces fit

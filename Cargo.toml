@@ -2,6 +2,11 @@
 members = ["programs/asset-rental"]
 resolver = "2"
 
+# Agave/Solana version used by the reproducible `solana-verify` build image.
+# Keep this in step with scripts/install-toolchain.sh.
+[workspace.metadata.cli]
+solana = "1.18.26"
+
 [profile.release]
 overflow-checks = true
 lto = "fat"
